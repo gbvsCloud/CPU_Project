@@ -1,0 +1,12 @@
+money
+0
+cpu_level
+0
+anti_virus_level
+0
+ssd_level
+0
+hd_level
+0
+ram_level
+0
