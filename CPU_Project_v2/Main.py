@@ -25,11 +25,9 @@ timer = 0
 score = 0
 click_damage = 1
 game_paused = False
-pos = 0, 0  # MOUSE POSITION
+pos = [0, 0]  # MOUSE POSITION
 mouse_click = False
 enemies_killed = 1
-
-click_damage = 1
 
 chain_stacks = 0
 drain_stacks = 0
@@ -49,6 +47,8 @@ player_variables = []
 
 file_check = os.path.exists('player_status.txt')
 
+# Check da existência do txt que armazena os dados do jogador
+# caso o txt não exista, um será criado
 if not file_check:
     with open('player_status.txt', 'w') as file:
         file.write('money\n')
@@ -64,7 +64,9 @@ if not file_check:
         file.write('ram_level\n')
         file.write('0\n')
 
-
+# Carrega os dados do jogador, lê o arquivo insere em uma lista
+# cada índice da lista representa um atributo dentro do jogo
+# como dinheiro e os niveis dos itens comprados pelo jogador
 def load_variables():
     global money, cpu_level, anti_virus_level, ssd_level, hd_level, ram_level, player_variables
 
@@ -81,6 +83,10 @@ def load_variables():
 
 load_variables()
 
+
+# Sobreecresve dados no save do jogador, esse método pede
+# a linha que será alterada e o novo valor a ser adicionado
+# nessa nova linha
 def save_variables(line, new_value):
     with open('player_status.txt', 'w') as file:
         list_size = range(len(player_variables))
@@ -92,6 +98,8 @@ def save_variables(line, new_value):
                 file.write(player_variables[word])
                 file.write('\n')
 
+
+#IMPORTAÇÃO DOS ARQUVOS UTILIZADOS NO JOGO
 # SETUP
 display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 clock = pygame.time.Clock()
@@ -105,7 +113,7 @@ click_sound = pygame.mixer.Sound('Sounds/click_sound.wav')
 click_sound.set_volume(1)
 
 # MUSICS
-game_music = pygame.mixer.music.load('Sounds/Spooktune.mp3')
+pygame.mixer.music.load('Sounds/Spooktune.mp3')
 pygame.mixer.music.set_volume(0.03)
 pygame.mixer.music.play(-1)
 
@@ -151,6 +159,9 @@ mainmenu_background = load('Images/mainmenu_bg.png').convert()
 mainmenu_background = pygame.transform.scale(mainmenu_background, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
 
+#DIVERSAS CLASSES UTILIZADAS PARA CRIAR UM PADRÃO E PODE UTILIZAR DA ORIENTAÇÃO A OBJETOS
+# A CLASSE SPRITE JÁ VEM POR PADRÃO COM VARIÁVEIS E METODOS PRÓPRIOS QUE AJUDAM NA CRIAÇÃO
+# DE INIMIGOS, BOTÕES, PLAYER
 class CPU(Sprite):
 
     HP = 3
@@ -167,7 +178,7 @@ class CPU(Sprite):
         self.rect = self.image.get_rect(center=(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2))
 
     def update(self):
-        global defense_stacks, FPS
+        global defense_stacks, FPS, drain_stacks, timer
         if self.damage_invulnerability > 0:
             self.damage_invulnerability -= 1 / FPS
         if pygame.sprite.groupcollide(Cpu_Group, Virus_Group, False, True):
@@ -175,31 +186,40 @@ class CPU(Sprite):
 
         if self.HP > self.MAX_HP:
             self.HP = self.MAX_HP
+        if drain_stacks > 0:
+            self.drain_effect()
+        #if (drain_stacks == 1 and timer <= 1800) or timer <= 1800:
+           # cpu.HP += (cpu.MAX_HP - cpu.HP) * (0.005 * drain_stacks) / 1.5
         if defense_stacks > 0:
-            self.emergencial_defense()
+            self.emergency_defense()
 
-    def emergencial_defense(self):
-        self.timer += (1 + len(Virus_Group) / 18) /FPS
+    def emergency_defense(self):
+        global timer
+        self.timer += (1 + len(Virus_Group) / 12) / FPS
 
         if self.HP < self.MAX_HP:
-            self.HP += (self.MAX_HP - self.HP) * (0.005 + defense_stacks * 0.001) / FPS
-            print('Curado em {}'.format((self.MAX_HP - self.HP) * (0.005 + defense_stacks * 0.001)/ FPS))
+            self.HP += (self.MAX_HP - self.HP) * (0.005 * defense_stacks) / FPS
+            #print('Curado em {}'.format((self.MAX_HP - self.HP) * (0.005 + defense_stacks * 0.001)/ FPS))
 
-        if self.timer >= 0.5 and (self.HP <= self.MAX_HP / 2 or len(Virus_Group) >= 6 or self.HP < 5):
+        if self.timer >= 0.5 and (self.HP <= self.MAX_HP / 2 or len(Virus_Group) >= 6 or self.HP < 5 or timer < 900):
             self.timer = 0
             if len(Virus_Group) > 0:
                 random = randint(0, len(Virus_Group) - 1)
-                pygame.draw.line(display,
-                                 (0, 0, 255),
-                                 (self.rect.centerx, self.rect.centery),
-                                 (Virus_Group.sprites()[random].rect.centerx, Virus_Group.sprites()[random].rect.centery),
-                                 6)
-                Virus_Group.sprites()[random].life -= 1 + defense_stacks + (Virus_Group.sprites()[random].max_life - Virus_Group.sprites()[random].life) / 8
+                thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (0, 255, 50), 5)
+                Virus_Group.sprites()[random].life -= defense_stacks + self.MAX_HP + (Virus_Group.sprites()[random].max_life - Virus_Group.sprites()[random].life) / 6
+
+    def drain_effect(self):
+        global drain_stacks, click_damage
+        for enemy in Virus_Group:
+            enemy.life -= (drain_stacks + (click_damage / 2) + (enemy.max_life - enemy.life) * (0.05 * drain_stacks)) / FPS
+            self.HP += self.MAX_HP * 0.001 / FPS
+            #print('Vida curada {}'.format(enemy.max_life * 0.01 / FPS))
 
     def got_hit(self):
         if self.damage_invulnerability <= 0:
             self.HP -= 1
             self.damage_invulnerability = 0.10
+
 
 class Item(Sprite):
     type = None
@@ -222,8 +242,8 @@ class Item(Sprite):
                         self.type = 'Heal'
                         self.image = heal_item
                     else:
-                        self.type = 'Health'
-                        self.image = health_item
+                        self.type = 'Damage'
+                        self.image = damage_item
             else:
                 x = randint(0, 2)
                 if x == 0:
@@ -318,6 +338,8 @@ class Button(Sprite):
         self.rect.topleft = (x, y)
 
     def update(self):
+        global money
+
         if self.rect.collidepoint(pos):
             self.image = pygame.transform.scale(self.image, (int(self.width * 0.90), int(self.height * 0.90)))
         else:
@@ -325,10 +347,14 @@ class Button(Sprite):
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             if self.scene == 'main game' and Game_state.game_state != 'pause' or self.scene == 'reset':
                 Game_state.reset = 0
-
             if self.scene == 'reset':
+                #BOTÃO METODOS
+                Game_state.reset = 0
                 Game_state.game_state = 'main game'
             else:
+                if self.scene == 'main menu':
+                    money += int(score * 0.01)
+                    save_variables(1, money)
                 Game_state.game_state = self.scene
 
 
@@ -357,6 +383,7 @@ class Shop_Button(Sprite):
             self.image = self.original_image
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             ...
+
 
 class Game_State:
     reset = 0
@@ -387,25 +414,24 @@ class Game_State:
         if self.reset == 0:  # RESETAR PARTIDA E VARIAVEIS
             self.reset_game()
 
-
         timer += 1
         display.blit(background, (0, 0))
+
+        if timer % 600 == 0:
+            if self.randPos == 0:
+                Virus_Group.add(Enemy(Worms_Model,
+                                      randint(0, DISPLAY_WIDTH),
+                                      self.randY * (DISPLAY_HEIGHT)))
+
+            else:
+                Virus_Group.add(Enemy(Worms_Model,
+                                      (randint(0, DISPLAY_WIDTH)),
+                                      (self.randY * (DISPLAY_HEIGHT))))
 
         if timer % 60 == 0:
             self.randPos = randint(0, 1)
             self.randX = randint(0, 1)
             self.randY = randint(0, 1)
-
-            if timer % 600 == 0:
-                if self.randPos == 0:
-                    Virus_Group.add(Enemy(Worms_Model,
-                                          randint(0, DISPLAY_WIDTH),
-                                          self.randY * (DISPLAY_HEIGHT)))
-
-                else:
-                    Virus_Group.add(Enemy(Worms_Model,
-                                          (randint(0, DISPLAY_WIDTH)),
-                                          (self.randY * (DISPLAY_HEIGHT))))
 
             if self.randPos == 0:
                 if randint(0, 5) == 0:
@@ -426,8 +452,6 @@ class Game_State:
                     Virus_Group.add(Enemy(Virus_Model,
                                           (self.randX * (DISPLAY_WIDTH)),
                                           (randint(0, DISPLAY_HEIGHT))))
-
-
 
         Cpu_Group.update()
         Cpu_Group.draw(display)
@@ -462,7 +486,11 @@ class Game_State:
 
 
     def reset_game(self):
-        global score, enemies_killed, click_damage, drain_stacks, chain_stacks, defense_stacks
+        global score, enemies_killed, click_damage, drain_stacks, chain_stacks, defense_stacks, money, execute_stacks
+
+        money += int(score * 0.01)
+        save_variables(1, money)
+
         score = 0
 
         Virus_Group.empty()
@@ -595,6 +623,7 @@ class Game_State:
                 self.game_state = 'pause'
                 self.pause()
 
+
 class Enemy(Sprite):
     movement_cooldown = 0
     movement_speed = 0
@@ -613,7 +642,6 @@ class Enemy(Sprite):
     def __init__(self, info, x, y):
         super().__init__()
         # ENEMY CLASS ATRIBUTES
-
         #ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
 
         self.type = info[7]
@@ -663,52 +691,47 @@ class Enemy(Sprite):
 
     def kill(self):
         global score, enemies_killed, chain_stacks, drain_stacks
+        enemies_killed += 1
+
         if self.type != 'Worm':
             score += (self.base_score * self.max_life)
         else:
             score += (self.base_score * (self.max_life / 6))
-        enemies_killed += 1
-
-        if drain_stacks > 0 and cpu.HP < cpu.MAX_HP:
-            cpu.HP += (cpu.MAX_HP - cpu.HP) * (0.005 * drain_stacks)
 
         self.chain_effect()
 
         if self.type == 'Worm':
             if randint(0, 2) > 0:
-                Item_Group.add(Item(False))
-        else:
-            if randint(0, 25) == 0:
-                Item_Group.add(Item(False))
+                Item_Group.add(Item(True))
 
         Sprite.kill(self)
 
     def click_check(self):
         global pos, mouse_click
+        #CALCULO DE DANO NO INIMGO AO CLICAR
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             mouse_click = True
-            self.life -= click_damage
+            self.life -= click_damage + (self.max_life - self.life) * 0.05
 
     def chain_effect(self):
         if len(Virus_Group) > 1 and chain_stacks > 0:
-            for i in range(int(chain_stacks / 5) + 1):
+            for i in range(int(chain_stacks / 3) + 1):
                 random = -1
                 while random == -1 or Virus_Group.sprites()[random].id == self.id:
                     random = randint(0, len(Virus_Group) - 1)
 
                 if len(Virus_Group) >= random:
-                    Virus_Group.sprites()[random].life -= (click_damage / 2 * (1 + chain_stacks) + Virus_Group.sprites()[random].max_life * 0.25)
+                    Virus_Group.sprites()[random].life -= (click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)
                     #print('Default damage: {}'.format((click_damage * (1 + chain_stacks))))
                     #print('Targe Life: {}, Extra Damage: {}'.format(Virus_Group.sprites()[random].max_life, Virus_Group.sprites()[random].max_life / 4))
                     #print('Boosted damage: {}'.format((click_damage * (1 + chain_stacks) + Virus_Group.sprites()[random].max_life / 4)))
-                    pygame.draw.line(display,
-                    (255, 255, 0),
-                    (self.rect.centerx, self.rect.centery),
-                    (Virus_Group.sprites()[random].rect.centerx, Virus_Group.sprites()[random].rect.centery),
-                    6)
+                    thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
 
     def check_life(self):
-        if self.life <= 0:
+        global execute_stacks
+        if self.life <= 0 or self.life <= self.max_life * ((execute_stacks * 2.5) / 100):
+            print(self.max_life)
+            print(self.life)
             self.kill()
 
     def draw_life(self):
@@ -737,6 +760,7 @@ class Enemy(Sprite):
             else:
                 self.rect.y -= self.movement_speed * 0.5625
             self.movement_cooldown = 0.1
+
 
 class Scanner(Sprite):
     direction = 1
@@ -767,12 +791,10 @@ class Scanner(Sprite):
             self.cooldown -= 1/FPS
             self.mov_speed = 0
 
-
-
         for enemy in Virus_Group:
             if self.rect.colliderect(enemy.rect) and self.cooldown <= 0:
                 self.damage_effect(enemy)
-                enemy.life -= (click_damage * 4) / FPS
+                enemy.life -= (click_damage * 3) / FPS
                 self.collision = 0.05
 
     def random_color(self):
@@ -782,15 +804,9 @@ class Scanner(Sprite):
         return (randint(3, 9))
 
     def damage_effect(self, enemy):
-        pygame.draw.line(display, self.random_color(),
-                         (self.rect.centerx, enemy.rect.centery),
-                         (enemy.rect.centerx, enemy.rect.centery), 10)
-        pygame.draw.line(display, self.random_color(),
-                         (self.rect.centerx, enemy.rect.centery + randint(20, 500)),
-                         (enemy.rect.centerx, enemy.rect.centery), self.random_width())
-        pygame.draw.line(display, self.random_color(),
-                         (self.rect.centerx, enemy.rect.centery - randint(20, 500)),
-                         (enemy.rect.centerx, enemy.rect.centery), self.random_width())
+        thunder((self.rect.centerx, enemy.rect.centery + randint(10 ,100)), enemy.rect.center, self.random_color(), 6)
+        thunder((self.rect.centerx, enemy.rect.centery), enemy.rect.center, (255, 255, 0), 6)
+        thunder((self.rect.centerx, enemy.rect.centery - randint(10, 100)), enemy.rect.center, self.random_color(), 6 )
 
     def movement(self):
         if self.direction == 1:
@@ -803,6 +819,12 @@ class Scanner(Sprite):
             if self.rect.x <= 0:
                 self.direction = 1
                 self.cooldown = 1
+
+# CRIAÇÃO DE GRUPOS
+# Os grupos possibilitam a agrupamento de vários sprites em um único local
+# facilitando no processo de desenhar os sprites e chamar o seu metodo update
+
+
 cpu = CPU(0.2)
 
 Cpu_Group = GroupSingle()
@@ -843,25 +865,54 @@ Shop_Group = Group()
 Shop_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
 
 # Modelos de Inimigo
-#ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
-Virus_Model = [3, 3000, 15, 0.2, 100, virus_image, 0.5, None]
-Fast_Virus_Model = [2, 8000, 25, 0.2, 200, fast_virus, 0.40, None]
-Worms_Model = [12, 20000, 30, 0, 500, worm_virus, 0.9, 'Worm']
-Worms_Child_Model = [2, 1000000, 12, 0.2, 50, worm_virus, 0.30, None]
+# ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
+Virus_Model = [2, 1500, 15, 0.2, 30, virus_image, 0.5, None]
+Fast_Virus_Model = [2, 3000, 25, 0.2, 80, fast_virus, 0.40, None]
+Worms_Model = [8, 5000, 30, 0, 2000, worm_virus, 0.9, 'Worm']
+Worms_Child_Model = [1.5, 1000000, 12, 0.2, 10, worm_virus, 0.30, None]
 
+def thunder(entity, target, color, size):
+    between_pos = []
+    if len(Virus_Group) > 0:
+        if entity[0] < target[0]:
+            between_pos.append(randint(entity[0], target[0]))
+        else:
+            between_pos.append(randint(target[0], entity[0]))
+
+        if entity[1] < target[1]:
+            between_pos.append(randint(entity[1], target[1]))
+        else:
+            between_pos.append(randint(target[1], entity[1]))
+
+    pygame.draw.line(display, color, entity, between_pos, size)
+    pygame.draw.line(display, color, between_pos, target, int(size/1.2))
+
+
+# LAÇO PRINCIPAL DO JOGO
 while isRunning:
-
+    # Por tick chama o método state_manager que analise o estado atual do jogo e roda
+    # um laço de repetição específico, cada laço representa um estado do jogo
+    # como, tela inicial, loja, jogo
     Game_state.state_manager()
 
+    # Verificação do estado do jogo para alterar o volume da música
     if Game_state.game_state == 'main game':
-        pygame.mixer.music.set_volume(0.03)
+        pygame.mixer.music.set_volume(0.0)
     elif Game_state.game_state == 'main menu':
-        pygame.mixer.music.set_volume(0.02)
+        pygame.mixer.music.set_volume(0.0)
     else:
-        pygame.mixer.music.set_volume(0.01)
+        pygame.mixer.music.set_volume(0.0)
 
+    # Verifica a posição e o click do mouse
     pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
+
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_SPACE]:
+        if len(Virus_Group) > 0:
+            thunder(pos, Virus_Group.sprites()[0].rect.center, (255, 255, 0), 6)
+            Virus_Group.sprites()[0].life -= Virus_Group.sprites()[0].max_life / 4
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -876,7 +927,8 @@ while isRunning:
                 else:
                     Game_state.game_state = 'pause'
             if event.key == pygame.K_SPACE and Game_state.game_state == 'main game':
-                Item_Group.add(Item())
+                #Item_Group.add(Item(True))
+                ...
 
     pygame.display.update()
     clock.tick(60)
