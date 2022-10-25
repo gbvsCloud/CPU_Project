@@ -112,6 +112,7 @@ clock = pygame.time.Clock()
 
 # FONTS CONFIG
 DEFAULT_FONT = font.Font('Fonts/game_over.ttf', 120)
+HEALTH_FONT = font.Font('Fonts/game_over.ttf', 60)
 TITLE_FONT = font.Font('Fonts/game_over.ttf', 200)
 
 # SOUNDS
@@ -144,6 +145,7 @@ damage_item = load('Images/damage_item.png').convert_alpha()
 chain_item = load('Images/chain_item.png').convert_alpha()
 drain_item = load('Images/drain_item.png').convert_alpha()
 defense_item = load('Images/defense_item.png').convert_alpha()
+execute_item = load('Images/guillotine_item.png').convert_alpha()
 
 btn_start = load('Images/btn_start.png').convert_alpha()
 btn_exit = load('Images/btn_exit.png').convert_alpha()
@@ -181,6 +183,7 @@ class CPU(Sprite):
     damage_invulnerability = 0
     hurt_image = 0
     timer = 0
+    last_life = 0
 
     def __init__(self):
         super().__init__()
@@ -189,10 +192,22 @@ class CPU(Sprite):
         height = self.image.get_height()
         self.image = cpu_good
         self.rect = self.image.get_rect(center=(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2))
+        self.last_life = self.MAX_HP
 
     def update(self):
         global defense_stacks, FPS, drain_stacks, timer
         self.cpu_animation()
+
+        if self.HP > self.last_life and self.HP - self.last_life > 0.01:
+            Text_Group.add(
+                Text('+{:.2f}'.format(self.HP - self.last_life),
+                     (0, 255, 0), 100, 2,
+                     [self.rect.centerx,
+                      self.rect.centery], 0))
+            self.last_life = self.HP
+
+        if self.HP != self.last_life:
+            self.last_life = self.HP
 
         if self.hurt_image > 0:
             self.hurt_image -= 1 / FPS
@@ -205,6 +220,7 @@ class CPU(Sprite):
             self.HP = self.MAX_HP
         if drain_stacks > 0 and len(Virus_Group) > 0:
             self.drain_effect()
+
         # if (drain_stacks == 1 and timer <= 1800) or timer <= 1800:
         # cpu.HP += (cpu.MAX_HP - cpu.HP) * (0.005 * drain_stacks) / 1.5
         if defense_stacks > 0:
@@ -225,14 +241,21 @@ class CPU(Sprite):
         if self.timer >= 1 and (self.HP <= self.MAX_HP / 2 or len(Virus_Group) >= 5 or self.HP < 5 or timer < 900):
             self.timer = 0
             if len(Virus_Group) > 0:
-                for i in range(1 + (self.MAX_HP - 3)):
+                for i in range(1 + int((self.MAX_HP - 3) / 3)):
                     random = randint(0, len(Virus_Group) - 1)
-                    thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (0, 255, 50), 5)
+                    thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
                     Virus_Group.sprites()[random].life -= defense_stacks + self.MAX_HP + (
                             Virus_Group.sprites()[random].max_life - Virus_Group.sprites()[random].life) / 6
+                    Text_Group.add(
+                        Text('{:.1f}'.format(
+                            (defense_stacks + self.MAX_HP + (
+                            Virus_Group.sprites()[random].max_life - Virus_Group.sprites()[random].life) / 6)),
+                            (55, 255, 20), 50, 0.6,
+                            [Virus_Group.sprites()[random].rect.centerx, Virus_Group.sprites()[random].rect.centery], 1))
+
 
     def drain_effect(self):
-        global drain_stacks, click_damage
+        global drain_stacks, click_damage, timer
 
         if self.HP < self.MAX_HP:
             self.HP += (self.MAX_HP * 0.001 * len(Virus_Group)) / FPS
@@ -240,6 +263,27 @@ class CPU(Sprite):
         for enemy in Virus_Group:
             # causa dano com base na quantidade de perks e com base na vida perdida também com base no número de perks
             enemy.life -= (0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks)) / FPS
+            if timer % 30 == 0:
+                if len(str(0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks) / FPS)) == 4:
+                    Text_Group.add(
+                        Text('{:.3f}'.format(
+                             (0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks)) / FPS),
+                             (255, 127, 127), 40, 0.5,
+                             [enemy.rect.centerx, enemy.rect.centery], 1))
+                elif len(str(0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks) / FPS)) == 3:
+                    Text_Group.add(
+                        Text('{:.2f}'.format(
+                             (0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks)) / FPS),
+                             (255, 127, 127), 40, 0.5,
+                             [enemy.rect.centerx, enemy.rect.centery], 1))
+                else:
+                    Text_Group.add(
+                        Text('{:.2f}'.format(
+                            (0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks)) / FPS),
+                            (255, 127, 127), 40, 0.5,
+                            [enemy.rect.centerx, enemy.rect.centery], 1))
+
+
 
     def got_hit(self):
         if self.damage_invulnerability <= 0:
@@ -279,7 +323,7 @@ class Item(Sprite):
                         self.type = 'Damage'
                         self.image = damage_item
             else:
-                x = randint(0, 2)
+                x = randint(0, 3)
                 if x == 0:
                     self.type = 'Chain'
                     self.image = pygame.transform.scale(chain_item, (chain_item.get_width() / 3,
@@ -291,8 +335,11 @@ class Item(Sprite):
                     self.type = 'Defense'
                     self.image = pygame.transform.scale(defense_item, (defense_item.get_width() / 3,
                                                                        defense_item.get_height() / 3))
+                elif x == 3:
+                    self.type = 'Execute'
+                    self.image = execute_item
         else:
-            x = randint(0, 2)
+            x = randint(0, 3)
             if x == 0:
                 self.type = 'Chain'
                 self.image = pygame.transform.scale(chain_item, (chain_item.get_width() / 3,
@@ -304,6 +351,10 @@ class Item(Sprite):
                 self.type = 'Defense'
                 self.image = pygame.transform.scale(defense_item, (defense_item.get_width() / 3,
                                                                    defense_item.get_height() / 3))
+            elif x == 3:
+                self.type = 'Execute'
+                self.image = execute_item
+
         self.rect = self.image.get_rect()
         if self.type != 'Chain' and self.type != 'Defense':
             self.image = pygame.transform.scale(self.image, (self.image.get_width() * 4, self.image.get_height() * 4))
@@ -317,7 +368,10 @@ class Item(Sprite):
 
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             mouse_click = True
-            self.kill()
+            if self.type == 'Heal' and cpu.HP < cpu.MAX_HP:
+                self.kill()
+            elif self.type != 'Heal':
+                self.kill()
 
         self.timer += 1 / FPS
 
@@ -336,7 +390,7 @@ class Item(Sprite):
         Sprite.kill(self)
 
     def item_picked(self):
-        global click_damage, chain_stacks, drain_stacks, defense_stacks
+        global click_damage, chain_stacks, drain_stacks, defense_stacks, execute_stacks
         if self.type == 'Heal':
             if cpu.HP < cpu.MAX_HP:
                 cpu.HP += 1 + (cpu.MAX_HP - cpu.HP) / 3
@@ -344,14 +398,16 @@ class Item(Sprite):
             cpu.MAX_HP += 1
             cpu.HP += 1
         elif self.type == 'Damage':
-            click_damage = (click_damage + 0.30) * 1.40
-            print('Damage {}'.format(click_damage))
+            click_damage = (click_damage + 0.50) * 1.10
+            #print('Damage {}'.format(click_damage))
         elif self.type == 'Chain':
             chain_stacks += 1
         elif self.type == 'Drain':
             drain_stacks += 1
         elif self.type == 'Defense':
             defense_stacks += 1
+        elif self.type == 'Execute':
+            execute_stacks += 1
 
 
 class Button(Sprite):
@@ -420,9 +476,11 @@ class Shop_Button(Sprite):
             ...
 
 
+
 class Game_State:
     reset = 0
-
+    highest_life_default = 0
+    highest_life_worm = 0
     def __init__(self):
         self.game_state = 'main menu'
         self.randPos = 0
@@ -431,6 +489,7 @@ class Game_State:
 
     def main_game(self):
         global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks
+
         if timer <= 9000:
             spawning_time = 15 + (50 - int(timer/1800) * 10)
         else:
@@ -441,7 +500,7 @@ class Game_State:
             save_variables(1, money)
             Game_state.game_state = 'pause'
 
-        if enemies_killed % 26 == 0:
+        if enemies_killed % 16 == 0:
             Item_Group.add(Item(False))
             enemies_killed = 1
 
@@ -501,6 +560,8 @@ class Game_State:
         Worms_Group.update()
         Worms_Group.draw(display)
 
+        Text_Group.update()
+
         # DISPLAYS
         score_display = DEFAULT_FONT.render(
             f'Pontuacao:{int(score)}',
@@ -525,18 +586,20 @@ class Game_State:
 
         #show_variables()
 
-        score = 0
+        timer = 0
+        score = 1
         Virus_Group.empty()
         Worms_Group.empty()
         Scanner_Group.empty()
+        Text_Group.empty()
         Item_Group.empty()
         Item_Group.add(Item(True))
         if anti_virus_level > 0:
             Scanner_Group.add(Scanner())
 
         enemies_killed = 1
-        click_damage = 1 + ram_level * 2
-        cpu.MAX_HP = 8 + cpu_level
+        click_damage = 1 + ram_level * 3
+        cpu.MAX_HP = 3 + cpu_level * 2
         cpu.HP = cpu.MAX_HP
 
         chain_stacks = 0
@@ -595,6 +658,7 @@ class Game_State:
         Virus_Group.draw(display)
         Worms_Group.draw(display)
         Item_Group.draw(display)
+        Text_Group.update()
 
         display.blit(pause_bg, (0, 0))
 
@@ -667,6 +731,7 @@ class Enemy(Sprite):
     time_alive = 0
     max_life = 0
     life = 0
+    last_hit = 0
 
     id = 0
     # SPECIAL VIRUS
@@ -695,10 +760,11 @@ class Enemy(Sprite):
                 self.max_life = 12000
 
         self.life = self.max_life
+        self.last_hit = self.max_life
         self.movement_speed = info[2]
         self.movement_speed_save = self.movement_speed
         self.movement_cooldown = info[3]
-        self.slow_speed = self.movement_speed * 0.60
+        self.slow_speed = self.movement_speed * 0.50
         self.base_score = info[4]
 
         # SPRITE CLASS ATRIBUTES
@@ -711,6 +777,8 @@ class Enemy(Sprite):
     def update(self):
         self.click_check()
         self.check_life()
+        if self.life > 0:
+            self.display_health()
         if self.time_alive <= 4:
             self.time_alive += 1 / FPS
         if self.slow > 0:
@@ -751,18 +819,40 @@ class Enemy(Sprite):
 
         Sprite.kill(self)
 
+    def display_health(self):
+        hp_display = HEALTH_FONT.render(str('{:.1f}'.format(self.life)),
+                                         True,
+                                         (255, 255, 255)
+                                         )
+        display.blit(hp_display, (self.rect.centerx - hp_display.get_width() / 2, self.rect.y - hp_display.get_height()))
+
     def click_check(self):
         global pos, mouse_click
         # CALCULO DE DANO NO INIMGO AO CLICAR
+
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             mouse_click = True
             self.life -= click_damage
-            self.slow = hd_level * 0.15
+            self.slow = hd_level * 0.20
+            Text_Group.add(
+                Text('{:.1f}'.format(click_damage),
+                     (255, 255, 255), 50, 0.5,
+                     [self.rect.centerx,
+                      self.rect.centery], 0))
+
+
 
     def chain_effect(self):
         global click_damage
+        #0.30 * 1,40
+        max_chains = 0
         if len(Virus_Group) > 1 and chain_stacks > 0:
-            for i in range(int(chain_stacks / 5) + int(click_damage / 20) + 1):
+            if int(click_damage / 20) <= 5:
+                max_chains = int(click_damage / 20)
+            else:
+                max_chains = 5
+
+            for i in range(1 + randint(0, max_chains)):
                 random = -1
                 while random == -1 or Virus_Group.sprites()[random].id == self.id:
                     random = randint(0, len(Virus_Group) - 1)
@@ -774,10 +864,23 @@ class Enemy(Sprite):
                     # print('Targe Life: {}, Extra Damage: {}'.format(Virus_Group.sprites()[random].max_life, Virus_Group.sprites()[random].max_life / 4))
                     # print('Boosted damage: {}'.format((click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)))
                     thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
+                    Text_Group.add(Text('{:.1f}'.format(click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25),
+                                        (255, 255, 0), 120, 0.8,
+                                        [Virus_Group.sprites()[random].rect.centerx,
+                                         Virus_Group.sprites()[random].rect.centery], 0))
 
     def check_life(self):
         global execute_stacks
-        if self.life <= 0 or self.life <= self.max_life * ((execute_stacks * 2.5) / 100):
+
+        if self.life <= 0:
+            self.kill()
+
+        if 0.25 + self.max_life * (execute_stacks * 0.030) >= self.life > 0 and execute_stacks > 0:
+            Text_Group.add(
+                Text('EXECUTADO!',
+                     (0, 0, 0), 80, 0.8,
+                     [self.rect.centerx, self.rect.centery], 0))
+
             self.kill()
 
     def draw_life(self):
@@ -825,6 +928,8 @@ class Scanner(Sprite):
         self.rect.x = 0
 
     def update(self):
+        global timer
+
         self.movement()
         if self.collision > 0:
             self.image = self.image = pygame.transform.scale(scanner_coll, (self.size, DISPLAY_HEIGHT))
@@ -845,6 +950,13 @@ class Scanner(Sprite):
                 enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5))) / FPS
                 enemy.slow = hd_level
                 self.collision = 0.05
+                if timer % 5 == 0:
+                    Text_Group.add(Text(
+                        '{:.2f}'.format((click_damage * (2.5 + (anti_virus_level * 0.5))) / FPS),
+                        (255, 0, 0), 30, 0.4,
+                        [enemy.rect.centerx,
+                         enemy.rect.centery], 0))
+
 
     def random_color(self):
         return (randint(100, 255), randint(100, 255), randint(100, 255))
@@ -870,6 +982,51 @@ class Scanner(Sprite):
                 self.cooldown = 0
 
 
+class Text(Sprite):
+    time = 0
+    total_time = 0
+    text = ''
+    color = ()
+    font = None
+    default_display = ''
+    speed = 0
+    pos = []
+
+    def __init__(self, text, color, size, time, position, speed):
+        super().__init__()
+        self.image = None
+        self.time = time
+        self.total_time = self.time
+        self.text = text
+        self.color = color
+        self.speed = speed
+        self.font = pygame.font.Font('Fonts/game_over.ttf', size)
+        self.pos = position
+        self.pos[0] += randint(-60, 60)
+        self.pos[1] += randint(-40, 40)
+        self.default_display = self.font.render(str(self.text),
+                                                True,
+                                                color
+                                                )
+
+    def update(self):
+        #self.time
+        self.pos[1] -= self.speed
+
+        self.default_display = self.font.render(str(self.text),
+                                                True,
+                                                self.color
+                                                )
+
+        display.blit(self.default_display, self.pos)
+        self.time -= 1 / FPS
+
+        if self.time <= 0:
+            self.kill()
+
+
+
+
 # CRIAÇÃO DE GRUPOS
 # Os grupos possibilitam a agrupamento de vários sprites em um único local
 # facilitando no processo de desenhar os sprites e chamar o seu metodo update
@@ -887,6 +1044,8 @@ Virus_Group = Group()
 Worms_Group = Group()
 
 Item_Group = Group()
+
+Text_Group = Group()
 
 Game_state = Game_State()
 
@@ -922,6 +1081,7 @@ Worms_Model = [8, 5000, 30, 0, 2000, worm_virus, 0.9, 'Worm']
 Worms_Child_Model = [1.5, 1000000, 12, 0.2, 10, worm_virus, 0.30, None]
 
 
+
 def thunder(entity, target, color, size):
     between_pos = []
     if len(Virus_Group) > 0:
@@ -935,8 +1095,9 @@ def thunder(entity, target, color, size):
         else:
             between_pos.append(randint(target[1], entity[1]))
 
-    pygame.draw.line(display, color, entity, between_pos, size)
-    pygame.draw.line(display, color, between_pos, target, int(size / 1.2))
+    dark_color = (int(color[0] / 1.3), int(color[1] / 1.3), int(color[2] / 1.3))
+    pygame.draw.line(display, dark_color, entity, between_pos, size)
+    pygame.draw.line(display, color, between_pos, target, int(size / 1.3))
 
 
 def music_manager():
@@ -965,11 +1126,14 @@ while isRunning:
 
     keys = pygame.key.get_pressed()
 
+    if keys[pygame.K_w]:
+        Item_Group.add(Item(False))
+
     if keys[pygame.K_SPACE]:
         if len(Virus_Group) > 0:
             for enemy in Virus_Group:
-                thunder(pos, enemy.rect.center, (0, 0, 0), 15)
-                enemy.life -= 10
+                thunder(pos, enemy.rect.center, (255, 255, 0), 6)
+                enemy.life -= 0.1
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

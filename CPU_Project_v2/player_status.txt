@@ -1,5 +1,5 @@
 money
-7000000001871451
+33490
 cpu_level
 0
 anti_virus_level
@@ -9,4 +9,4 @@ ssd_level
 hd_level
 0
 ram_level
-0
+1
