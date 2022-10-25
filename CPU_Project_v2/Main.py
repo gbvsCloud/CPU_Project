@@ -637,6 +637,15 @@ class Game_State:
         # print('Drain stacks: {}'.format(drain_stacks))
         # print('\n\n\n\n\n\n')
 
+        Status_Group.add(Status(damage_item, click_damage, (255, 255, 255), 140, -250, False))
+        Status_Group.add(Status(health_item, cpu.MAX_HP, (255, 255, 255), 140, -200, False))
+        Status_Group.add(Status(chain_item, chain_stacks, (255, 255, 255), 140, -130, True))
+        Status_Group.add(Status(drain_item, drain_stacks, (255, 255, 255), 140, -70, False))
+        Status_Group.add(Status(defense_item, defense_stacks, (255, 255, 255), 140, 0, True))
+        Status_Group.add(Status(execute_item, execute_stacks, (255, 255, 255), 140, 75, False))
+        print(len(Status_Group))
+
+
         display.blit(background, (0, 0))
 
         hp_display = DEFAULT_FONT.render(
@@ -661,6 +670,10 @@ class Game_State:
         Text_Group.update()
 
         display.blit(pause_bg, (0, 0))
+
+        Status_Group.draw(display)
+        Status_Group.update()
+        Status_Group.empty()
 
         if cpu.HP > 0:
             pause_display = TITLE_FONT.render(
@@ -835,7 +848,7 @@ class Enemy(Sprite):
             self.life -= click_damage
             self.slow = hd_level * 0.20
             Text_Group.add(
-                Text('{:.1f}'.format(click_damage),
+                Text('{:.2f}'.format(click_damage),
                      (255, 255, 255), 50, 0.5,
                      [self.rect.centerx,
                       self.rect.centery], 0))
@@ -1025,6 +1038,35 @@ class Text(Sprite):
             self.kill()
 
 
+class Status(Sprite):
+    text = ''
+    color = ()
+    font = None
+    default_display = ''
+    pos = [0, 0]
+
+    def __init__(self, image, text, color, size, vposition, rescale):
+        super().__init__()
+        self.image = image
+        if not rescale:
+            self.image = pygame.transform.scale(image, (self.image.get_width() * 4, self.image.get_height() * 4))
+        else:
+            self.image = pygame.transform.scale(image, (self.image.get_width() / 3, self.image.get_height() / 3))
+        self.rect = self.image.get_rect()
+        self.pos = (DISPLAY_WIDTH / 2,  (DISPLAY_HEIGHT / 2 + vposition) - size / 2)
+        self.rect.topleft = (self.pos[0] - self.image.get_width(), self.pos[1] + 15)
+        self.text = text
+        if len(str(self.text)) > 1:
+            self.text = '{:.2f}'.format(text)
+        self.color = color
+        self.font = pygame.font.Font('Fonts/game_over.ttf', size)
+        self.default_display = self.font.render(str(f':{self.text}'),
+                                                True,
+                                                color
+                                                )
+
+    def update(self):
+        display.blit(self.default_display, self.pos)
 
 
 # CRIAÇÃO DE GRUPOS
@@ -1046,6 +1088,8 @@ Worms_Group = Group()
 Item_Group = Group()
 
 Text_Group = Group()
+
+Status_Group = Group()
 
 Game_state = Game_State()
 
@@ -1072,6 +1116,7 @@ HTPlay_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
 # SHOP BUTTONS
 Shop_Group = Group()
 Shop_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
+
 
 # Modelos de Inimigo
 # ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO

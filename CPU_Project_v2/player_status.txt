@@ -1,5 +1,5 @@
 money
-33490
+168901
 cpu_level
 0
 anti_virus_level
