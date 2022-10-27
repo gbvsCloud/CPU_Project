@@ -86,6 +86,7 @@ load_variables()
 def show_variables():
     print('CPU LEVEL {}, VIDA {}'.format(cpu_level, cpu.MAX_HP + cpu_level))
     print('RAM LEVEL {}, DANO {}'.format(ram_level, click_damage + ram_level * 2))
+    print('SSD LEVEL {}, DANO EM % DA VIDA MÁXIMA {}'.format(ssd_level, 2.5 * ssd_level))
     print('HD LEVEL {}, LENTIDÃO {}'.format(hd_level, 0.15 * hd_level))
     print('SCANNER LEVEL {}, DANO DO SCANNER {}'.format(anti_virus_level, 2.5 + 0.5 * anti_virus_level))
 
@@ -147,7 +148,7 @@ drain_item = load('Images/drain_item.png').convert_alpha()
 defense_item = load('Images/defense_item.png').convert_alpha()
 execute_item = load('Images/guillotine_item.png').convert_alpha()
 
-btn_start = load('Images/btn_start.png').convert_alpha()
+btn_start = load('Images/btn_play2.png').convert_alpha()
 btn_exit = load('Images/btn_exit.png').convert_alpha()
 btn_shop = load('Images/btn_shop.png').convert_alpha()
 btn_main = load('Images/btn_mainmenu.png').convert_alpha()
@@ -288,7 +289,7 @@ class CPU(Sprite):
     def got_hit(self):
         if self.damage_invulnerability <= 0:
             self.HP -= 1
-            self.damage_invulnerability = 0.20
+            self.damage_invulnerability = 0.10
             self.hurt_image = 0.65
 
     def cpu_animation(self):
@@ -587,7 +588,7 @@ class Game_State:
         #show_variables()
 
         timer = 0
-        score = 1
+        score = 0
         Virus_Group.empty()
         Worms_Group.empty()
         Scanner_Group.empty()
@@ -643,7 +644,6 @@ class Game_State:
         Status_Group.add(Status(drain_item, drain_stacks, (255, 255, 255), 140, -70, False))
         Status_Group.add(Status(defense_item, defense_stacks, (255, 255, 255), 140, 0, True))
         Status_Group.add(Status(execute_item, execute_stacks, (255, 255, 255), 140, 75, False))
-        print(len(Status_Group))
 
 
         display.blit(background, (0, 0))
@@ -762,12 +762,12 @@ class Enemy(Sprite):
         self.id = randint(0, 99999999)
 
         if self.type != 'Worm':
-            if int(score / info[1]) <= info[0] * 10000:
+            if int(score / info[1]) <= 2000:
                 self.max_life = info[0] + int(score / info[1])
             else:
                 self.max_life = 10000
         else:
-            if info[0] * (1 + int(score / info[1])) <= 12000:
+            if info[0] * (1 + int(score / info[1])) <= 8000:
                 self.max_life = info[0] * (1 + int(score / info[1]))
             else:
                 self.max_life = 12000
@@ -784,8 +784,7 @@ class Enemy(Sprite):
 
         self.image = pygame.transform.scale(info[5], (info[5].get_width() * info[6], info[5].get_height() * info[6]))
         self.rect = self.image.get_rect()
-        self.rect.centerx = x
-        self.rect.centery = y
+        self.rect.center = (x, y)
 
     def update(self):
         self.click_check()
@@ -845,10 +844,10 @@ class Enemy(Sprite):
 
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             mouse_click = True
-            self.life -= click_damage
+            self.life -= click_damage + (ssd_level * 0.025 * self.max_life)
             self.slow = hd_level * 0.20
             Text_Group.add(
-                Text('{:.2f}'.format(click_damage),
+                Text('{:.2f}'.format(click_damage + (ssd_level * 0.025 * self.max_life)),
                      (255, 255, 255), 50, 0.5,
                      [self.rect.centerx,
                       self.rect.centery], 0))
@@ -860,11 +859,12 @@ class Enemy(Sprite):
         #0.30 * 1,40
         max_chains = 0
         if len(Virus_Group) > 1 and chain_stacks > 0:
-            if int(click_damage / 20) <= 5:
+            if int(click_damage / 25) <= 6:
                 max_chains = int(click_damage / 20)
             else:
-                max_chains = 5
+                max_chains = 6
 
+            print(max_chains)
             for i in range(1 + randint(0, max_chains)):
                 random = -1
                 while random == -1 or Virus_Group.sprites()[random].id == self.id:
@@ -872,7 +872,7 @@ class Enemy(Sprite):
 
                 if len(Virus_Group) >= random:
                     Virus_Group.sprites()[random].life -= (
-                            click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)
+                            click_damage + Virus_Group.sprites()[random].max_life * 0.25)
                     # print('Default damage: {}'.format(click_damage * ((chain_stacks / 2))))
                     # print('Targe Life: {}, Extra Damage: {}'.format(Virus_Group.sprites()[random].max_life, Virus_Group.sprites()[random].max_life / 4))
                     # print('Boosted damage: {}'.format((click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)))
@@ -960,16 +960,15 @@ class Scanner(Sprite):
         for enemy in Virus_Group:
             if self.rect.colliderect(enemy.rect) and self.cooldown <= 0:
                 self.damage_effect(enemy)
-                enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5))) / FPS
+                enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS
                 enemy.slow = hd_level
                 self.collision = 0.05
                 if timer % 5 == 0:
                     Text_Group.add(Text(
-                        '{:.2f}'.format((click_damage * (2.5 + (anti_virus_level * 0.5))) / FPS),
+                        '{:.2f}'.format((click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS),
                         (255, 0, 0), 30, 0.4,
                         [enemy.rect.centerx,
                          enemy.rect.centery], 0))
-
 
     def random_color(self):
         return (randint(100, 255), randint(100, 255), randint(100, 255))
@@ -1056,8 +1055,9 @@ class Status(Sprite):
         self.pos = (DISPLAY_WIDTH / 2,  (DISPLAY_HEIGHT / 2 + vposition) - size / 2)
         self.rect.topleft = (self.pos[0] - self.image.get_width(), self.pos[1] + 15)
         self.text = text
-        if len(str(self.text)) > 1:
+        if type(text) == float:
             self.text = '{:.2f}'.format(text)
+
         self.color = color
         self.font = pygame.font.Font('Fonts/game_over.ttf', size)
         self.default_display = self.font.render(str(f':{self.text}'),
