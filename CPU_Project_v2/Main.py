@@ -170,6 +170,10 @@ pause = pygame.transform.scale(pause_bg, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 htplay = load('Images/htplay.png').convert()
 htplay = pygame.transform.scale(htplay, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
+minecraft = pygame.transform.scale(load('Images/minecraft.jpg').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+minecraft_legends = pygame.transform.scale(load('Images/minecraft_legends.jpg').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+
+
 shop_bg = load('Images/shop_bg.png').convert()
 shop_bg = pygame.transform.scale(shop_bg, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
@@ -235,12 +239,15 @@ class CPU(Sprite):
 
         if self.HP < self.MAX_HP:
             # cura a cpu com base na vida perdida multiplicado pelos perks
-            self.HP += (self.MAX_HP - self.HP) * (0.005 * defense_stacks) / FPS
+            if (self.MAX_HP - self.HP) * (0.005 * defense_stacks) * 60 < 0.15:
+                self.HP += (self.MAX_HP - self.HP) * (0.005 * defense_stacks) / FPS
+            else:
+                self.HP += 0.15 / FPS
             # print('Curado em {}'.format((self.MAX_HP - self.HP) * (0.005 + defense_stacks * 0.001)/ FPS))
 
         # quando self.timer for maior que 1 e a vida for menor ou igual a vida máxima ou tiverem mais de 6 inimigos
         # a cpu irá atirar, ela também atirará nos primeiros 15 segundos de partida
-        if self.timer >= 1 and (self.HP <= self.MAX_HP / 2 or len(Virus_Group) >= 5 or self.HP < 5 or timer < 900):
+        if self.timer >= 3 and (self.HP <= self.MAX_HP / 2 or len(Virus_Group) >= 5 or self.HP < 5 or timer < 900):
             self.timer = 0
             if len(Virus_Group) > 0:
                 for i in range(1 + int((self.MAX_HP - 3) / 3)):
@@ -259,8 +266,10 @@ class CPU(Sprite):
         global drain_stacks, click_damage, timer
 
         if self.HP < self.MAX_HP:
-            self.HP += (self.MAX_HP * 0.001 * len(Virus_Group)) / FPS
-
+            if (self.MAX_HP * 0.001 * len(Virus_Group)) * 60 < 0.15:
+                self.HP += (self.MAX_HP * 0.001 * len(Virus_Group)) / FPS
+            else:
+                self.HP += 0.15 / FPS
         for enemy in Virus_Group:
             # causa dano com base na quantidade de perks e com base na vida perdida também com base no número de perks
             enemy.life -= (0.5 * drain_stacks + (enemy.max_life - enemy.life) * (0.009 * drain_stacks)) / FPS
@@ -388,17 +397,18 @@ class Item(Sprite):
 
         if luck_stacks <= 9:
             if self.luck_pick >= 5 - luck_stacks * 0.5:
+                if self.type != 'Heal':
+                    Text_Group.add(
+                        Text('COLETADO!',
+                            (0, 255, 0), 60, 0.8,
+                            [self.rect.centerx, self.rect.centery], 0))
+                    self.kill()
+        elif self.luck_pick >= 0.5:
+            if self.type != 'Heal':
                 Text_Group.add(
                     Text('COLETADO!',
-                         (0, 255, 0), 60, 0.8,
-                         [self.rect.centerx, self.rect.centery], 0))
-                self.kill()
-        else:
-            if self.luck_pick >= 0.5:
-                Text_Group.add(
-                    Text('COLETADO!',
-                         (0, 255, 0), 60, 0.8,
-                         [self.rect.centerx, self.rect.centery], 0))
+                        (0, 255, 0), 60, 0.8,
+                        [self.rect.centerx, self.rect.centery], 0))
                 self.kill()
 
         if luck_stacks > 0:
@@ -428,7 +438,7 @@ class Item(Sprite):
             cpu.MAX_HP += 1
             cpu.HP += 1
         elif self.type == 'Damage':
-            click_damage = (click_damage + 0.50) * 1.25
+            click_damage = (click_damage + 0.50) * 1.10
             #print('Damage {}'.format(click_damage))
         elif self.type == 'Chain':
             chain_stacks += 1
@@ -463,7 +473,7 @@ class Button(Sprite):
         global money
 
         if self.rect.collidepoint(pos):
-            self.image = pygame.transform.scale(self.image, (int(self.width * 0.90), int(self.height * 0.90)))
+            self.image = pygame.transform.scale(self.image, (int(self.width * 1.05), int(self.height * 1.05)))
         else:
             self.image = self.original_image
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
@@ -474,9 +484,6 @@ class Button(Sprite):
                 Game_state.reset = 0
                 Game_state.game_state = 'main game'
             else:
-                if self.scene == 'main menu':
-                    money += int(score * 0.01)
-                    save_variables(1, money)
                 Game_state.game_state = self.scene
 
 class Game_State:
@@ -484,6 +491,9 @@ class Game_State:
     highest_life_default = 0
     highest_life_worm = 0
     i = 0
+
+    images_htplay = [htplay, minecraft, minecraft_legends]
+    index = 0
 
     def __init__(self):
         self.game_state = 'main menu'
@@ -494,14 +504,14 @@ class Game_State:
     def main_game(self):
         global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks
 
+        save_variables(1, money)
+
         if timer <= 9000:
             spawning_time = 15 + (50 - int(timer/1800) * 10)
         else:
             spawning_time = 15
 
         if cpu.HP <= 0:
-            money += int(score * 0.01)
-            save_variables(1, money)
             Game_state.game_state = 'pause'
 
         if luck_stacks > 1 and cpu.HP >= cpu.MAX_HP:
@@ -522,12 +532,12 @@ class Game_State:
             if self.randPos == 0:
                 Virus_Group.add(Enemy(Worms_Model,
                                       randint(0, DISPLAY_WIDTH),
-                                      self.randY * DISPLAY_HEIGHT))
+                                      self.randY * DISPLAY_HEIGHT, 'Mother'))
 
             else:
                 Virus_Group.add(Enemy(Worms_Model,
                                       (randint(0, DISPLAY_WIDTH)),
-                                      self.randY * DISPLAY_HEIGHT))
+                                      self.randY * DISPLAY_HEIGHT, 'Mother'))
 
         if timer % spawning_time == 0:
             self.randPos = randint(0, 1)
@@ -538,21 +548,21 @@ class Game_State:
                 if randint(0, 5) == 0:
                     Virus_Group.add(Enemy(Fast_Virus_Model,
                                           (randint(0, DISPLAY_WIDTH)),
-                                          self.randY * DISPLAY_HEIGHT))
+                                          self.randY * DISPLAY_HEIGHT, 'Fast'))
                 else:
                     Virus_Group.add(Enemy(Virus_Model,
                                           (randint(0, DISPLAY_WIDTH)),
-                                          self.randY * DISPLAY_HEIGHT))
+                                          self.randY * DISPLAY_HEIGHT, 'Normal'))
 
             else:
                 if randint(0, 5) == 0:
                     Virus_Group.add(Enemy(Fast_Virus_Model,
                                           (self.randX * DISPLAY_WIDTH),
-                                          (randint(0, DISPLAY_HEIGHT))))
+                                          (randint(0, DISPLAY_HEIGHT)), 'Fast'))
                 else:
                     Virus_Group.add(Enemy(Virus_Model,
                                           (self.randX * DISPLAY_WIDTH),
-                                          (randint(0, DISPLAY_HEIGHT))))
+                                          (randint(0, DISPLAY_HEIGHT)), 'Normal'))
 
         Cpu_Group.update()
         Cpu_Group.draw(display)
@@ -565,11 +575,11 @@ class Game_State:
         Virus_Group.update()
         Virus_Group.draw(display)
 
-        Item_Group.update()
-        Item_Group.draw(display)
-
         Worms_Group.update()
         Worms_Group.draw(display)
+
+        Item_Group.update()
+        Item_Group.draw(display)
 
         Text_Group.update()
 
@@ -590,10 +600,8 @@ class Game_State:
         display.blit(hp_display, (118, DISPLAY_HEIGHT - hp_display.get_rect().bottom - 50))
 
     def reset_game(self):
-        global score, enemies_killed, click_damage, drain_stacks, chain_stacks, defense_stacks, money, execute_stacks, timer, drain_stacks
+        global score, enemies_killed, click_damage, drain_stacks, chain_stacks, defense_stacks, money, execute_stacks, timer, drain_stacks, luck_stacks
         self.reset += 1
-        money += int(score * 0.01)
-        save_variables(1, money)
 
         #show_variables()
 
@@ -609,7 +617,7 @@ class Game_State:
             Scanner_Group.add(Scanner())
 
         enemies_killed = 1
-        click_damage = 1 + ram_level * 4
+        click_damage = 1 + ram_level * 2
         cpu.MAX_HP = 3 + cpu_level * 2
         cpu.HP = cpu.MAX_HP
 
@@ -622,7 +630,7 @@ class Game_State:
         self.game_state = 'main game'
 
     def main_menu(self):
-
+        global money
         # display.blit(mainmenu_background, (0, 0))
 
         display.fill((255, 255, 255))
@@ -630,7 +638,7 @@ class Game_State:
         title_display = TITLE_FONT.render(
             f'CPU - CENTRAL DE PANICO URGENTE',
             True,
-            (38, 83, 24)
+            (0, 0, 0)
         )
         display.blit(title_display, (DISPLAY_WIDTH / 2 - title_display.get_width() / 2, -10))
 
@@ -659,19 +667,22 @@ class Game_State:
 
         display.blit(background, (0, 0))
 
-        hp_display = DEFAULT_FONT.render(
-            f'Saude da CPU:{int(cpu.HP)}/{int(cpu.MAX_HP)}',
-            True,
-            (255, 255, 255)
-        )
-        display.blit(hp_display, (0, DISPLAY_HEIGHT - hp_display.get_rect().bottom - 50))
+        display.blit(pygame.transform.scale2x(cpu.image), (-36, DISPLAY_HEIGHT - cpu.image.get_height() * 2 + 30))
 
         score_display = DEFAULT_FONT.render(
             f'Pontuacao:{int(score)}',
             True,
             (255, 255, 255)
         )
-        display.blit(score_display, (0, DISPLAY_HEIGHT - score_display.get_rect().bottom))
+
+        display.blit(score_display, (118, DISPLAY_HEIGHT - score_display.get_rect().bottom))
+
+        hp_display = DEFAULT_FONT.render(
+            f'Saude da CPU:{"{:.1f}".format(cpu.HP)}/{int(cpu.MAX_HP)}',
+            True,
+            (255, 255, 255)
+        )
+        display.blit(hp_display, (118, DISPLAY_HEIGHT - hp_display.get_rect().bottom - 50))
 
         Cpu_Group.draw(display)
         Scanner_Group.draw(display)
@@ -690,13 +701,13 @@ class Game_State:
             pause_display = TITLE_FONT.render(
                 f'JOGO PAUSADO.',
                 True,
-                (38, 83, 24)
+                (0, 0, 0)
             )
         else:
             pause_display = TITLE_FONT.render(
                 f'VOCE PERDEU.',
                 True,
-                (38, 83, 24)
+                (0, 0, 0)
             )
 
         display.blit(pause_display, (DISPLAY_WIDTH / 2 - pause_display.get_width() / 2, -10))
@@ -705,7 +716,15 @@ class Game_State:
         Pause_Group.update()
 
     def htplay(self):
-        display.blit(htplay, (0, 0))
+
+        display.blit(self.images_htplay[self.index], (0, 0))
+
+        images_display = DEFAULT_FONT.render(
+            f'{self.index + 1}/{len(self.images_htplay)}',
+            True,
+            (255, 255, 255)
+        )
+        display.blit(images_display, (0, 0 - 20))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -714,8 +733,18 @@ class Game_State:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 click_sound.play()
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RIGHT:
+                    if self.index + 1 < len(self.images_htplay):
+                        self.index += 1
+                    else:
+                        self.index = 0
                 if event.key == pygame.K_LEFT:
-                    ...
+                    if self.index - 1 >= 0:
+                        self.index -= 1
+                    else:
+                        self.index = len(self.images_htplay) - 1
+
+
         HTPlay_Group.draw(display)
         HTPlay_Group.update()
 
@@ -735,6 +764,7 @@ class Game_State:
     def state_manager(self):
         global score
         if self.game_state == 'main game':
+
             self.main_game()
         elif self.game_state == 'main menu':
             self.main_menu()
@@ -766,7 +796,7 @@ class Enemy(Sprite):
     max_life = 0
     life = 0
     last_hit = 0
-
+    name = ''
     id = 0
     # SPECIAL VIRUS
     type = None
@@ -774,13 +804,14 @@ class Enemy(Sprite):
 
     slow = 0
 
-    def __init__(self, info, x, y):
+    def __init__(self, info, x, y, name):
         super().__init__()
         # ENEMY CLASS ATRIBUTES
         # ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
 
         self.type = info[7]
         self.id = randint(0, 99999999)
+        self.name = name
 
         if self.type != 'Worm':
             if int(score / info[1]) <= 2000:
@@ -829,13 +860,12 @@ class Enemy(Sprite):
             self.spawn_timer -= 1 / FPS
             if self.spawn_timer <= 0:
                 self.spawn_timer = 1.5
-                Virus_Group.add(Enemy(Worms_Child_Model, self.rect.centerx, self.rect.centery))
-
+                Virus_Group.add(Enemy(Worms_Child_Model, self.rect.centerx, self.rect.centery, 'Child'))
         if self.life > 0:
             self.draw_life()
 
     def kill(self):
-        global score, enemies_killed, chain_stacks, drain_stacks, luck_stacks
+        global score, money, enemies_killed, chain_stacks, drain_stacks, luck_stacks
         enemies_killed += 1
 
         if self.type != 'Worm':
@@ -848,7 +878,7 @@ class Enemy(Sprite):
 
         if luck_stacks > 0:
             x = randint(1, 100)
-            if x <= luck_stacks * 2:
+            if x <= luck_stacks:
                 Text_Group.add(
                     Text('ITEM GERADO!',
                          (0, 255, 0), 80, 1.5,
@@ -859,6 +889,16 @@ class Enemy(Sprite):
             if randint(0, 2) > 0:
                 Item_Group.add(Item(True))
 
+        if self.name == 'Normal':
+            money += 3
+        elif self.name == 'Fast':
+            money += 5
+        elif self.name == 'Mother':
+            money += 8
+        elif self.name == 'Child':
+            money += 1
+
+        print(money)
         Sprite.kill(self)
 
     def display_health(self):
@@ -874,11 +914,11 @@ class Enemy(Sprite):
 
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             mouse_click = True
-            self.life -= click_damage + (ssd_level * 0.025 * self.max_life)
+            self.life -= click_damage + (ssd_level * 0.035 * self.max_life)
             self.slow = hd_level * 0.20
             Text_Group.add(
                 Text('{:.2f}'.format(click_damage + (ssd_level * 0.025 * self.max_life)),
-                     (255, 255, 255), 50, 0.5,
+                     (255, 255, 255), 65, 0.5,
                      [self.rect.centerx,
                       self.rect.centery], 0))
 
@@ -987,7 +1027,7 @@ class Scanner(Sprite):
         for enemy in Virus_Group:
             if self.rect.colliderect(enemy.rect) and self.cooldown <= 0:
                 self.damage_effect(enemy)
-                enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS
+                enemy.life -= (click_damage * (1.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS
                 enemy.slow = hd_level
                 self.collision = 0.05
                 if timer % 5 == 0:
@@ -1013,12 +1053,12 @@ class Scanner(Sprite):
             self.rect.x += self.mov_speed
             if self.rect.x > DISPLAY_WIDTH:
                 self.direction = 0
-                self.cooldown = 0
+                self.cooldown = 5 - anti_virus_level
         else:
             self.rect.x -= self.mov_speed
-            if self.rect.x <= 0:
+            if self.rect.x < 0:
                 self.direction = 1
-                self.cooldown = 0
+                self.cooldown = 5 - anti_virus_level
 
 
 class Text(Sprite):
@@ -1123,17 +1163,17 @@ Game_state = Game_State()
 
 # MAIN MENU BUTTONS
 Button_Group = Group()
-Button_Group.add(Button(0, DISPLAY_HEIGHT - 360, btn_start, 0.8, 'main game'))
-Button_Group.add(Button(25, DISPLAY_HEIGHT - 240, btn_shop, 0.8, 'shop'))
-Button_Group.add(Button(50, DISPLAY_HEIGHT - 120, btn_exit, 0.8, 'exit'))
-Button_Group.add(Button(DISPLAY_WIDTH - 350, DISPLAY_HEIGHT - 240, btn_htplay, 0.8, 'how to play'))
-Button_Group.add(Button(DISPLAY_WIDTH - 450, DISPLAY_HEIGHT - 120, btn_credits, 0.8, 'exit'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 480, btn_start, 1, 'main game'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 360, btn_htplay, 1, 'how to play'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 240, btn_shop, 1, 'shop'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 120, btn_exit, 1, 'exit'))
+
 
 # PAUSE BUTTONS
 Pause_Group = Group()
-Pause_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_resume, 0.8, 'resume'))
-Pause_Group.add(Button(DISPLAY_WIDTH / 2 - 200, DISPLAY_HEIGHT - 130, btn_reset, 0.8, 'reset'))
-Pause_Group.add(Button(DISPLAY_WIDTH - 370, DISPLAY_HEIGHT - 130, btn_main, 0.8, 'main menu'))
+Pause_Group.add(Button(0, DISPLAY_HEIGHT - 120, btn_resume, 1, 'resume'))
+Pause_Group.add(Button(DISPLAY_WIDTH / 2 - 200, DISPLAY_HEIGHT - 120, btn_reset, 1, 'reset'))
+Pause_Group.add(Button(DISPLAY_WIDTH - 380, DISPLAY_HEIGHT - 140, btn_main, 1, 'main menu'))
 
 # HOW TO PLAY BUTTONS
 HTPlay_Group = Group()
@@ -1145,7 +1185,7 @@ Shop_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
 
 
 # Modelos de Inimigo
-# ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
+# ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO, NOME
 Virus_Model = [2, 2000, 15, 0.2, 30, virus_image, 0.5, None]
 Fast_Virus_Model = [2, 3000, 25, 0.2, 80, fast_virus, 0.40, None]
 Worms_Model = [8, 5000, 30, 0, 2000, worm_virus, 0.9, 'Worm']
