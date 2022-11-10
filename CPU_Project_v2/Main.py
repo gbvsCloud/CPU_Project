@@ -94,12 +94,28 @@ def show_variables():
 # Sobreecresve dados no save do jogador, esse método pede
 # a linha que será alterada e o novo valor a ser adicionado
 # nessa nova linha
-def save_variables(line, new_value):
+
+def save_variables():
     with open('player_status.txt', 'w') as file:
         list_size = range(len(player_variables))
         for word in list_size:
-            if word == line and line != None:
-                file.write(str(new_value))
+            if word == 1:
+                file.write(str(money))
+                file.write('\n')
+            elif word == 3:
+                file.write(str(cpu_level))
+                file.write('\n')
+            elif word == 5:
+                file.write(str(anti_virus_level))
+                file.write('\n')
+            elif word == 7:
+                file.write(str(ssd_level))
+                file.write('\n')
+            elif word == 9:
+                file.write(str(hd_level))
+                file.write('\n')
+            elif word == 11:
+                file.write(str(ram_level))
                 file.write('\n')
             else:
                 file.write(player_variables[word])
@@ -159,6 +175,8 @@ btn_reset = load('Images/btn_reset.png').convert_alpha()
 btn_credits = load('Images/btn_credits.png').convert_alpha()
 btn_htplay = load('Images/btn_howtoplay.png').convert_alpha()
 btn_back = load('Images/btn_back.png').convert_alpha()
+btn_upgrade = load('Images/btn_upgrade.png').convert_alpha()
+btn_maximized = load('Images/btn_maximized.png').convert_alpha()
 
 # BACKGROUND
 background = load('Images/windowserror.png').convert()
@@ -250,7 +268,7 @@ class CPU(Sprite):
         if self.timer >= 3 and (self.HP <= self.MAX_HP / 2 or len(Virus_Group) >= 5 or self.HP < 5 or timer < 900):
             self.timer = 0
             if len(Virus_Group) > 0:
-                for i in range(1 + int((self.MAX_HP - 3) / 3)):
+                for i in range(1 + int((self.MAX_HP - 3) / 6)):
                     random = randint(0, len(Virus_Group) - 1)
                     thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
                     Virus_Group.sprites()[random].life -= defense_stacks + self.MAX_HP + (
@@ -397,17 +415,26 @@ class Item(Sprite):
 
         if luck_stacks <= 9:
             if self.luck_pick >= 5 - luck_stacks * 0.5:
+                if self.rect.centerx > DISPLAY_HEIGHT / 2:
+                    speed = -2
+                else:
+                    speed = 2
                 if self.type != 'Heal':
                     Text_Group.add(
                         Text('COLETADO!',
-                            (0, 255, 0), 60, 0.8,
+                            (0, 255, 0), 60, 2,
                             [self.rect.centerx, self.rect.centery], 0))
                     self.kill()
         elif self.luck_pick >= 0.5:
+            speed = 0
+            if self.rect.centerx > DISPLAY_HEIGHT / 2:
+                speed = -2
+            else:
+                speed = 2
             if self.type != 'Heal':
                 Text_Group.add(
                     Text('COLETADO!',
-                        (0, 255, 0), 60, 0.8,
+                        (0, 255, 0), 60, 2,
                         [self.rect.centerx, self.rect.centery], 0))
                 self.kill()
 
@@ -504,7 +531,7 @@ class Game_State:
     def main_game(self):
         global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks
 
-        save_variables(1, money)
+        save_variables()
 
         if timer <= 9000:
             spawning_time = 15 + (50 - int(timer/1800) * 10)
@@ -617,7 +644,7 @@ class Game_State:
             Scanner_Group.add(Scanner())
 
         enemies_killed = 1
-        click_damage = 1 + ram_level * 2
+        click_damage = 1 + ram_level * 3
         cpu.MAX_HP = 3 + cpu_level * 2
         cpu.HP = cpu.MAX_HP
 
@@ -744,7 +771,6 @@ class Game_State:
                     else:
                         self.index = len(self.images_htplay) - 1
 
-
         HTPlay_Group.draw(display)
         HTPlay_Group.update()
 
@@ -760,6 +786,8 @@ class Game_State:
 
         Shop_Group.draw(display)
         Shop_Group.update()
+        load_variables()
+
 
     def state_manager(self):
         global score
@@ -814,7 +842,7 @@ class Enemy(Sprite):
         self.name = name
 
         if self.type != 'Worm':
-            if int(score / info[1]) <= 2000:
+            if int(score / info[1]) <= 10000:
                 self.max_life = info[0] + int(score / info[1])
             else:
                 self.max_life = 10000
@@ -873,8 +901,7 @@ class Enemy(Sprite):
         else:
             score += (self.base_score * (self.max_life / 8)) * ((8 - self.time_alive) / 8)
 
-        if randint(0, 1 + int(chain_stacks / 3)) > 0:
-            self.chain_effect()
+        self.chain_effect()
 
         if luck_stacks > 0:
             x = randint(1, 100)
@@ -898,7 +925,6 @@ class Enemy(Sprite):
         elif self.name == 'Child':
             money += 1
 
-        print(money)
         Sprite.kill(self)
 
     def display_health(self):
@@ -926,12 +952,12 @@ class Enemy(Sprite):
         global click_damage
         max_chains = 0
         if len(Virus_Group) > 1 and chain_stacks > 0:
-            if int(click_damage / 25) <= 6:
+            if int(click_damage / 25) <= 3:
                 max_chains = int(click_damage / 20)
             else:
-                max_chains = 6
+                max_chains = 3
 
-            print(max_chains)
+            #print(max_chains)
             for i in range(1 + randint(0, max_chains)):
                 random = -1
                 while random == -1 or Virus_Group.sprites()[random].id == self.id:
@@ -939,12 +965,12 @@ class Enemy(Sprite):
 
                 if len(Virus_Group) >= random:
                     Virus_Group.sprites()[random].life -= (
-                            click_damage / 2 + Virus_Group.sprites()[random].max_life * 0.15)
+                            click_damage / 2 + Virus_Group.sprites()[random].max_life * 0.10)
                     # print('Default damage: {}'.format(click_damage * ((chain_stacks / 2))))
                     # print('Targe Life: {}, Extra Damage: {}'.format(Virus_Group.sprites()[random].max_life, Virus_Group.sprites()[random].max_life / 4))
                     # print('Boosted damage: {}'.format((click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)))
                     thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
-                    Text_Group.add(Text('{:.1f}'.format(click_damage / 2 + Virus_Group.sprites()[random].max_life * 0.15),
+                    Text_Group.add(Text('{:.1f}'.format(click_damage / 2 + Virus_Group.sprites()[random].max_life * 0.10),
                                         (255, 255, 0), 120, 0.8,
                                         [Virus_Group.sprites()[random].rect.centerx,
                                          Virus_Group.sprites()[random].rect.centery], 0))
@@ -1027,7 +1053,7 @@ class Scanner(Sprite):
         for enemy in Virus_Group:
             if self.rect.colliderect(enemy.rect) and self.cooldown <= 0:
                 self.damage_effect(enemy)
-                enemy.life -= (click_damage * (1.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS
+                enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS
                 enemy.slow = hd_level
                 self.collision = 0.05
                 if timer % 5 == 0:
@@ -1134,6 +1160,101 @@ class Status(Sprite):
     def update(self):
         display.blit(self.default_display, self.pos)
 
+class Shop_Button(Sprite):
+    level = 0
+    attribute = ''
+    price = 0
+    scale = 0
+    level = 0
+    above_text = ''
+    below_text = ''
+    above_font = pygame.font.Font('Fonts/game_over.ttf', 120)
+    below_font = pygame.font.Font('Fonts/game_over.ttf', 60)
+    def __init__(self, x, y, attribute, price, scale):
+        super().__init__()
+        self.image = btn_upgrade
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.attribute = attribute
+        self.price = price
+        self.scale = scale
+
+        if self.attribute == 'cpu':
+            self.above_text = 'CPU'
+        elif self.attribute == 'antivirus':
+            self.above_text = 'ANTI-VIRUS'
+        elif self.attribute == 'ram':
+            self.above_text = 'RAM'
+        elif self.attribute == 'ssd':
+            self.above_text = 'SSD'
+        elif self.attribute == 'hd':
+            self.above_text = 'HD'
+
+    def update(self):
+        global anti_virus_level, cpu_level, ram_level, hd_level, ssd_level, money
+        if self.attribute == 'cpu':
+            self.below_text = f'Nivel: {cpu_level} Preco: {self.price + (cpu_level * self.scale)}'
+            self.level = cpu_level
+        elif self.attribute == 'antivirus':
+            self.below_text = f'Nivel: {anti_virus_level} Preco: {self.price + (anti_virus_level * self.scale)}'
+            self.level = anti_virus_level
+        elif self.attribute == 'ram':
+            self.below_text = f'Nivel: {ram_level} Preco: {self.price + (ram_level * self.scale)}'
+            self.level = ram_level
+        elif self.attribute == 'ssd':
+            self.below_text = f'Nivel: {ssd_level} Preco: {self.price + (ssd_level * self.scale)}'
+            self.level = ssd_level
+        elif self.attribute == 'hd':
+            self.below_text = f'Nivel: {hd_level} Preco: {self.price + (hd_level * self.scale)}'
+            self.level = hd_level
+
+        if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0] and self.level < 5:
+            if money >= self.price + self.level * self.scale:
+                if self.attribute == 'ram':
+                    ram_level += 1
+                elif self.attribute == 'cpu':
+                    cpu_level += 1
+                    print(cpu_level)
+                elif self.attribute == 'antivirus':
+                    anti_virus_level += 1
+                elif self.attribute == 'hd':
+                    hd_level += 1
+                elif self.attribute == 'ssd':
+                    ssd_level += 1
+                money -= self.price + self.level * self.scale
+                save_variables()
+
+        above_text_display = self.above_font.render(
+            f'{self.above_text}',
+            True,
+            (255, 255, 255)
+        )
+        below_text_display = self.below_font.render(
+            f'{self.below_text}',
+            True,
+            (255, 255, 255)
+        )
+
+        if self.level < 5:
+            if self.attribute != 'antivirus':
+                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 150, self.rect.y - 30))
+            else:
+                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 60, self.rect.y - 30))
+        else:
+            if self.attribute != 'antivirus':
+                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 150, self.rect.y - 50))
+            else:
+                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 60, self.rect.y - 50))
+        if self.level < 5:
+            display.blit(below_text_display, (self.rect.x + 100, self.rect.bottom - 40  ))
+
+        if self.level < 5:
+            self.image = btn_upgrade
+        else:
+            self.image = btn_maximized
+
+
+
 
 # CRIAÇÃO DE GRUPOS
 # Os grupos possibilitam a agrupamento de vários sprites em um único local
@@ -1154,6 +1275,8 @@ Worms_Group = Group()
 Item_Group = Group()
 
 Text_Group = Group()
+
+Shop_Group = Group()
 
 Status_Group = Group()
 
@@ -1180,8 +1303,12 @@ HTPlay_Group = Group()
 HTPlay_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
 
 # SHOP BUTTONS
-Shop_Group = Group()
 Shop_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
+Shop_Group.add(Shop_Button(DISPLAY_WIDTH / 2 - 200, DISPLAY_HEIGHT / 2 - 50, 'antivirus', 450, 200))
+Shop_Group.add(Shop_Button(1100, DISPLAY_HEIGHT / 2 - 200, 'ram', 200, 150))
+Shop_Group.add(Shop_Button(1100, DISPLAY_HEIGHT / 2 + 100, 'ssd', 350, 250))
+Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 - 200, 'cpu', 300, 150))
+Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 + 100, 'hd', 250, 200))
 
 
 # Modelos de Inimigo
@@ -1194,6 +1321,7 @@ Worms_Child_Model = [1.5, 1000000, 12, 0.2, 10, worm_virus, 0.30, None]
 
 def thunder(entity, target, color, size):
     between_pos = []
+
     if len(Virus_Group) > 0:
         if entity[0] < target[0]:
             between_pos.append(randint(entity[0], target[0]))
@@ -1206,8 +1334,10 @@ def thunder(entity, target, color, size):
             between_pos.append(randint(target[1], entity[1]))
 
     dark_color = (int(color[0] / 1.3), int(color[1] / 1.3), int(color[2] / 1.3))
+
     pygame.draw.line(display, dark_color, entity, between_pos, size)
     pygame.draw.line(display, color, between_pos, target, int(size / 1.3))
+
 
 
 def music_manager():
