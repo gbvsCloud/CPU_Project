@@ -289,7 +289,7 @@ class CPU(Sprite):
 
         if self.HP < self.MAX_HP:
             # cura a cpu com base na vida perdida multiplicado pelos perks
-            if (self.MAX_HP - self.HP) * (0.005 * defense_stacks) * 60 < 0.15:
+            if (self.MAX_HP - self.HP) * (0.005 * defense_stacks) < 0.15:
                 self.HP += (self.MAX_HP - self.HP) * (0.005 * defense_stacks) / FPS
             else:
                 self.HP += 0.15 / FPS
@@ -443,6 +443,10 @@ class Item(Sprite):
             if self.type == 'Heal' and cpu.HP < cpu.MAX_HP:
                 self.kill()
             elif self.type != 'Heal':
+                Text_Group.add(
+                    Text('ITEM COLETADO!',
+                         (0, 255, 0), 60, 2,
+                         [self.rect.centerx, self.rect.centery], 0))
                 self.kill()
 
         if luck_stacks <= 9:
@@ -578,11 +582,11 @@ class Game_State:
         if luck_stacks > 1 and cpu.HP >= cpu.MAX_HP:
             if enemies_killed % 16 == 0:
                 Item_Group.add(Item(False))
-                enemies_killed = 1
+                enemies_killed -= 15
         else:
             if enemies_killed % 21 == 0:
                 Item_Group.add(Item(False))
-                enemies_killed = 1
+                enemies_killed -= 15
 
         if self.reset == 0:  # RESETAR PARTIDA E VARIAVEIS
             self.reset_game()
@@ -978,6 +982,8 @@ class Enemy(Sprite):
             score += (self.base_score * self.max_life) * ((8 - self.time_alive) / 8)
         else:
             score += (self.base_score * (self.max_life / 8)) * ((8 - self.time_alive) / 8)
+            if randint(0, 2) > 0:
+                Item_Group.add(Item(True))
 
         self.chain_effect()
 
@@ -989,10 +995,6 @@ class Enemy(Sprite):
                          (0, 255, 0), 80, 1.5,
                          [cpu.rect.centerx, cpu.rect.top], 0))
                 Item_Group.add(Item(False))
-
-        if self.type == 'Worm':
-            if randint(0, 2) > 0:
-                Item_Group.add(Item(True))
 
         if self.name == 'Normal':
             money += 3
@@ -1438,7 +1440,7 @@ Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 + 100, 'hd', 250, 200))
 # Modelos de Inimigo
 # ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
 Virus_Model = [2, 2000, 15, 0.1, 30, normal_sprites, 2, None]
-Fast_Virus_Model = [1.5, 4500, 35, 0.1, 80, fast_sprites, 0.40, None]
+Fast_Virus_Model = [1.5, 4500, 30, 0.05 , 80, fast_sprites, 0.40, None]
 Worms_Model = [8, 5000, 30, 0, 2000, worm_sprites, 0.9, 'Worm']
 Worms_Child_Model = [1.5, 1000000, 15, 0.2, 10, child_sprites, 0.30, None]
 
