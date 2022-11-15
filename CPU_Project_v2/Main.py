@@ -19,6 +19,8 @@ MONITOR_WIDTH, MONITOR_HEIGHT = pyautogui.size()
 DISPLAY_WIDTH = MONITOR_WIDTH
 DISPLAY_HEIGHT = MONITOR_HEIGHT
 
+percentage = 0
+
 # GAME GLOBAL VARIABLES
 isRunning = True
 timer = 0
@@ -130,6 +132,7 @@ clock = pygame.time.Clock()
 
 # FONTS CONFIG
 DEFAULT_FONT = font.Font('Fonts/game_over.ttf', 120)
+PERCENTAGE_FONT = font.Font('Fonts/game_over.ttf', 90)
 HEALTH_FONT = font.Font('Fonts/game_over.ttf', 60)
 TITLE_FONT = font.Font('Fonts/game_over.ttf', 200)
 
@@ -143,12 +146,41 @@ pygame.mixer.music.set_volume(0.03)
 pygame.mixer.music.play(-1)
 
 # SPRITES
-virus_image = load('Images/virus.png').convert_alpha()
-fast_virus = load('Images/virus_rapido.png').convert_alpha()
+normal_sprites = [load('Images/normal_vertical_1.png'), load('Images/normal_vertical_2.png'),
+                  load('Images/normal_horizontal_1.png'), load('Images/normal_horizontal_2.png'),
+                  load('Images/normal_diagonal_1.png'), load('Images/normal_diagonal_2.png')]
+
+for i in range(len(normal_sprites)):
+    normal_sprites[i] = pygame.transform.scale2x(normal_sprites[i].convert_alpha())
+
+
+fast_sprites = [load('Images/rapido_vertical_1.png'), load('Images/rapido_vertical_2.png'),
+                  load('Images/rapido_horizontal_1.png'), load('Images/rapido_horizontal_2.png'),
+                  load('Images/rapido_diagonal_1.png'), load('Images/rapido_diagonal_2.png')]
+
+for i in range(len(fast_sprites)):
+    fast_sprites[i] = pygame.transform.scale2x(fast_sprites[i].convert_alpha())
+
+
+child_sprites = [load('Images/filho_1.png'), load('Images/filho_2.png')]
+
+for i in range(len(child_sprites)):
+    child_sprites[i] = pygame.transform.scale2x(child_sprites[i].convert_alpha())
+
+
+worm_sprites = [load('Images/worm_1.png'), load('Images/worm_2.png')]
+
+for i in range(len(worm_sprites)):
+    worm_sprites[i] = pygame.transform.scale2x(worm_sprites[i].convert_alpha())
+
+
 worm_virus = load('Images/virus_worm.png').convert_alpha()
 cpu_good = load('Images/CPU.png').convert_alpha()
 cpu_bad = load('Images/CPU 2.png').convert_alpha()
 cpu_hurt = load('Images/CPU 3.png').convert_alpha()
+
+mouse_image = load('Images/mouse_image.png').convert_alpha()
+mouse_image2 = load('Images/mouse_image2.png').convert_alpha()
 
 cpu_good = pygame.transform.scale(cpu_good, (96, 96))
 cpu_bad = pygame.transform.scale(cpu_bad, (96, 96))
@@ -284,7 +316,7 @@ class CPU(Sprite):
         global drain_stacks, click_damage, timer
 
         if self.HP < self.MAX_HP:
-            if (self.MAX_HP * 0.001 * len(Virus_Group)) * 60 < 0.15:
+            if (self.MAX_HP * 0.001 * len(Virus_Group))  < 0.15:
                 self.HP += (self.MAX_HP * 0.001 * len(Virus_Group)) / FPS
             else:
                 self.HP += 0.15 / FPS
@@ -529,16 +561,18 @@ class Game_State:
         self.randY = 0
 
     def main_game(self):
-        global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks
+        global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks, percentage
 
         save_variables()
+
+        percentage = (score * 100) / 8000000
 
         if timer <= 9000:
             spawning_time = 15 + (50 - int(timer/1800) * 10)
         else:
             spawning_time = 15
 
-        if cpu.HP <= 0:
+        if cpu.HP <= 0 or percentage >= 100:
             Game_state.game_state = 'pause'
 
         if luck_stacks > 1 and cpu.HP >= cpu.MAX_HP:
@@ -619,6 +653,14 @@ class Game_State:
 
         display.blit(score_display, (118, DISPLAY_HEIGHT - score_display.get_rect().bottom))
 
+        percentage_display = PERCENTAGE_FONT.render(
+            f'PORCENTAGEM DE ARQUIVOS VERIFICADOS: {percentage:.2f}%',
+            True,
+            (255, 255, 255)
+        )
+
+        display.blit(percentage_display, (0, 0))
+
         hp_display = DEFAULT_FONT.render(
             f'Saude da CPU:{"{:.1f}".format(cpu.HP)}/{int(cpu.MAX_HP)}',
             True,
@@ -644,8 +686,8 @@ class Game_State:
             Scanner_Group.add(Scanner())
 
         enemies_killed = 1
-        click_damage = 1 + ram_level * 3
-        cpu.MAX_HP = 3 + cpu_level * 2
+        click_damage = 1 + ram_level * 3.5
+        cpu.MAX_HP = 3 + cpu_level * 1
         cpu.HP = cpu.MAX_HP
 
         chain_stacks = 0
@@ -724,7 +766,13 @@ class Game_State:
         Status_Group.update()
         Status_Group.empty()
 
-        if cpu.HP > 0:
+        if percentage >= 100:
+            pause_display = TITLE_FONT.render(
+                f'O COMPUTADOR FOI LIMPO.',
+                True,
+                (0, 0, 0)
+            )
+        elif cpu.HP > 0:
             pause_display = TITLE_FONT.render(
                 f'JOGO PAUSADO.',
                 True,
@@ -817,6 +865,7 @@ class Enemy(Sprite):
     movement_cooldown = 0
     movement_speed = 0
     movement_speed_save = movement_speed
+    speed_movement = 0
     slow_speed = 0
     base_score = 0
     final_score = 0
@@ -826,9 +875,16 @@ class Enemy(Sprite):
     last_hit = 0
     name = ''
     id = 0
+    direction = []
+    sprites = []
+
+    anim_timer = 0
+    anim_num = 0
+
     # SPECIAL VIRUS
     type = None
     spawn_timer = 1.5
+
 
     slow = 0
 
@@ -856,23 +912,44 @@ class Enemy(Sprite):
         self.last_hit = self.max_life
         self.movement_speed = info[2]
         self.movement_speed_save = self.movement_speed
-        self.movement_cooldown = info[3]
+        self.speed_movement = info[3]
+        self.movement_cooldown = self.speed_movement
         self.slow_speed = self.movement_speed * 0.50
         self.base_score = info[4]
+        self.direction = [0, 0]
 
         # SPRITE CLASS ATRIBUTES
 
-        self.image = pygame.transform.scale(info[5], (info[5].get_width() * info[6], info[5].get_height() * info[6]))
+        self.image = info[5][0]
+        self.sprites = info[5]
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
 
     def update(self):
         self.click_check()
         self.check_life()
+
+        if self.anim_timer < 0.25 :
+            self.anim_timer += 1 / FPS
+        else:
+            self.anim_timer = 0
+            if self.anim_num == 0:
+                self.anim_num = 1
+            else:
+                self.anim_num = 0
+
+        if self.name == 'Normal' or self.name == 'Fast':
+            self.animation(self.sprites)
+        else:
+            self.image = self.sprites[0 + self.anim_num]
+
+
         if self.life > 0:
             self.display_health()
+
         if self.time_alive <= 4:
             self.time_alive += 1 / FPS
+
         if self.slow > 0:
             self.movement_speed = self.slow_speed
             self.slow -= 1 / FPS
@@ -889,6 +966,7 @@ class Enemy(Sprite):
             if self.spawn_timer <= 0:
                 self.spawn_timer = 1.5
                 Virus_Group.add(Enemy(Worms_Child_Model, self.rect.centerx, self.rect.centery, 'Child'))
+
         if self.life > 0:
             self.draw_life()
 
@@ -1003,18 +1081,64 @@ class Enemy(Sprite):
 
     def movement(self):
         global display
-        self.movement_cooldown -= 1 / FPS
+
+        cpu_pos = (display.get_width() / 2, display.get_height() / 2)
+
         if self.movement_cooldown <= 0:
-            cpu_pos = (display.get_width() / 2, display.get_height() / 2)
-            if cpu_pos[0] > self.rect.centerx:
-                self.rect.x += self.movement_speed
+            if abs(cpu_pos[0] - self.rect.centerx) > 15:
+                if cpu_pos[0] > self.rect.centerx:
+                    self.direction[0] = 1
+                    self.rect.x += self.movement_speed
+                else:
+                    self.direction[0] = 2
+                    self.rect.x -= self.movement_speed
+
             else:
-                self.rect.x -= self.movement_speed
-            if cpu_pos[1] > self.rect.centery:
-                self.rect.y += self.movement_speed * 0.4375
+                self.direction[0] = 0
+
+            if abs(cpu_pos[1] - self.rect.centery) > 15:
+                if cpu_pos[1] > self.rect.centery:
+                    self.direction[1] = 1
+                    self.rect.y += self.movement_speed * 0.5
+                else:
+                    self.direction[1] = 2
+                    self.rect.y -= self.movement_speed * 0.5
             else:
-                self.rect.y -= self.movement_speed * 0.4375
-            self.movement_cooldown = 0.1
+                self.direction[1] = 0
+
+            self.movement_cooldown = self.speed_movement
+        else:
+            self.movement_cooldown -= 1 / FPS
+
+    def animation(self, sprites):
+
+        ## direction 0  = 1 a esquerda
+        ## direction 0  = 2 a direita
+        ## direction 1  = 1 acima
+        ## direction 1  = 2 abaixo
+
+        if self.direction[0] != 0 and self.direction[1] != 0:
+            if self.direction[0] == 1 and self.direction[1] == 2:
+                self.image = self.sprites[4 + self.anim_num]
+            elif self.direction[0] == 1 and self.direction[1] == 1:
+                self.image = pygame.transform.flip(self.sprites[4 + self.anim_num], False, True)
+            elif self.direction[0] == 2 and self.direction[1] == 2:
+                self.image = pygame.transform.flip(self.sprites[4 + self.anim_num], True, False)
+            elif self.direction[0] == 2 and self.direction[1] == 1:
+                self.image = pygame.transform.flip(self.sprites[4 + self.anim_num], True, True)
+        else:
+            if self.direction[0] == 0:
+                if self.direction[1] == 1:
+                    self.image = pygame.transform.flip(self.sprites[0 + self.anim_num], False, True)
+                else:
+                    self.image = self.sprites[0 + self.anim_num]
+            else:
+                if self.direction[0] == 1:
+                    self.image = self.sprites[2 + self.anim_num]
+                else:
+                    self.image = pygame.transform.flip(self.sprites[2 + self.anim_num], True, False)
+
+
 
 
 class Scanner(Sprite):
@@ -1312,11 +1436,11 @@ Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 + 100, 'hd', 250, 200))
 
 
 # Modelos de Inimigo
-# ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO, NOME
-Virus_Model = [2, 2000, 15, 0.2, 30, virus_image, 0.5, None]
-Fast_Virus_Model = [2, 3000, 25, 0.2, 80, fast_virus, 0.40, None]
-Worms_Model = [8, 5000, 30, 0, 2000, worm_virus, 0.9, 'Worm']
-Worms_Child_Model = [1.5, 1000000, 12, 0.2, 10, worm_virus, 0.30, None]
+# ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
+Virus_Model = [2, 2000, 15, 0.1, 30, normal_sprites, 2, None]
+Fast_Virus_Model = [1.5, 4500, 35, 0.1, 80, fast_sprites, 0.40, None]
+Worms_Model = [8, 5000, 30, 0, 2000, worm_sprites, 0.9, 'Worm']
+Worms_Child_Model = [1.5, 1000000, 15, 0.2, 10, child_sprites, 0.30, None]
 
 
 def thunder(entity, target, color, size):
