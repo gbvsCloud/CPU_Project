@@ -141,7 +141,8 @@ click_sound = pygame.mixer.Sound('Sounds/click_sound.wav')
 click_sound.set_volume(1)
 
 # MUSICS
-pygame.mixer.music.load('Sounds/menu_principal.mpeg')
+current_song = 'Sounds/Menu CPU - Final.mp3'
+pygame.mixer.music.load(current_song)
 pygame.mixer.music.set_volume(0.03)
 pygame.mixer.music.play(-1)
 
@@ -548,6 +549,8 @@ class Button(Sprite):
                 Game_state.game_state = 'main game'
             else:
                 Game_state.game_state = self.scene
+                if self.scene == 'resume':
+                    pygame.mixer.music.unpause()
 
 class Game_State:
     reset = 0
@@ -565,9 +568,17 @@ class Game_State:
         self.randY = 0
 
     def main_game(self):
-        global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks, percentage
+        global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks, percentage, current_song
 
         save_variables()
+
+        if current_song != 'Sounds/Up and Down - Final.mp3':
+            current_song = 'Sounds/Up and Down - Final.mp3'
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(current_song)
+            pygame.mixer.music.stop()
+            pygame.mixer.music.play(-1)
+
 
         percentage = (score * 100) / 8000000
 
@@ -673,10 +684,11 @@ class Game_State:
         display.blit(hp_display, (118, DISPLAY_HEIGHT - hp_display.get_rect().bottom - 50))
 
     def reset_game(self):
-        global score, enemies_killed, click_damage, drain_stacks, chain_stacks, defense_stacks, money, execute_stacks, timer, drain_stacks, luck_stacks
+        global score, enemies_killed, click_damage, drain_stacks, chain_stacks, defense_stacks, money, execute_stacks, timer, drain_stacks, luck_stacks, current_song
         self.reset += 1
-
         #show_variables()
+
+        pygame.mixer.music.rewind()
 
         timer = 0
         score = 0
@@ -703,7 +715,7 @@ class Game_State:
         self.game_state = 'main game'
 
     def main_menu(self):
-        global money
+        global money, current_song
         # display.blit(mainmenu_background, (0, 0))
 
         display.fill((255, 255, 255))
@@ -714,6 +726,13 @@ class Game_State:
             (0, 0, 0)
         )
         display.blit(title_display, (DISPLAY_WIDTH / 2 - title_display.get_width() / 2, -10))
+
+        if current_song != 'Sounds/Menu CPU - Final.mp3':
+            current_song = 'Sounds/Menu CPU - Final.mp3'
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(current_song)
+            pygame.mixer.music.stop()
+            pygame.mixer.music.play(-1)
 
         Button_Group.draw(display)
         Button_Group.update()
@@ -737,6 +756,7 @@ class Game_State:
         Status_Group.add(Status(defense_item, defense_stacks, (255, 255, 255), 140, 0, True))
         Status_Group.add(Status(execute_item, execute_stacks, (255, 255, 255), 140, 75, False))
         Status_Group.add(Status(luck_item, luck_stacks, (255, 255, 255), 140, 150, False))
+
 
         display.blit(background, (0, 0))
 
@@ -1294,8 +1314,11 @@ class Shop_Button(Sprite):
     level = 0
     above_text = ''
     below_text = ''
+    description_text = ''
     above_font = pygame.font.Font('Fonts/game_over.ttf', 120)
     below_font = pygame.font.Font('Fonts/game_over.ttf', 60)
+    description_font = pygame.font.Font('Fonts/game_over.ttf', 50)
+
     def __init__(self, x, y, attribute, price, scale):
         super().__init__()
         self.image = btn_upgrade
@@ -1307,17 +1330,29 @@ class Shop_Button(Sprite):
 
         if self.attribute == 'cpu':
             self.above_text = 'CPU'
+            self.description_text = 'Aumenta a vida maxima'
         elif self.attribute == 'antivirus':
             self.above_text = 'ANTI-VIRUS'
+            self.description_text = 'Um scanner horizontal vai te auxiliar a matar inimigos'
         elif self.attribute == 'ram':
             self.above_text = 'RAM'
+            self.description_text = 'Aumenta o dano base do clique'
         elif self.attribute == 'ssd':
             self.above_text = 'SSD'
+            self.description_text = 'Causa dano extra com base na vida maxima dos inimigos'
         elif self.attribute == 'hd':
             self.above_text = 'HD'
+            self.description_text = 'Aplica lentidao ao causar dano'
+
+        self.description_text_display = self.description_font.render(
+            f'{self.description_text}',
+            True,
+            (255, 255, 255)
+        )
 
     def update(self):
         global anti_virus_level, cpu_level, ram_level, hd_level, ssd_level, money
+
         if self.attribute == 'cpu':
             self.below_text = f'Nivel: {cpu_level} Preco: {self.price + (cpu_level * self.scale)}'
             self.level = cpu_level
@@ -1361,18 +1396,16 @@ class Shop_Button(Sprite):
             (255, 255, 255)
         )
 
-        if self.level < 5:
-            if self.attribute != 'antivirus':
-                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 150, self.rect.y - 30))
-            else:
-                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 60, self.rect.y - 30))
+        if self.level >= 5:
+            display.blit(above_text_display,
+                         (self.rect.centerx - above_text_display.get_width() / 2, self.rect.top - 65))
+            display.blit(self.description_text_display,
+                         (self.rect.centerx - self.description_text_display.get_width() / 2, self.rect.y - 10))
         else:
-            if self.attribute != 'antivirus':
-                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 150, self.rect.y - 50))
-            else:
-                display.blit(above_text_display, (self.rect.x + len(self.above_text) + 60, self.rect.y - 50))
-        if self.level < 5:
-            display.blit(below_text_display, (self.rect.x + 100, self.rect.bottom - 40  ))
+            display.blit(above_text_display,
+                         (self.rect.centerx - above_text_display.get_width() / 2, self.rect.top - 35))
+            display.blit(self.description_text_display, (self.rect.centerx - self.description_text_display.get_width() / 2, self.rect.y + 20))
+        display.blit(below_text_display, (self.rect.centerx - below_text_display.get_width() / 2, self.rect.bottom))
 
         if self.level < 5:
             self.image = btn_upgrade
@@ -1440,8 +1473,8 @@ Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 + 100, 'hd', 250, 200))
 # Modelos de Inimigo
 # ORDEM VIDA, GAP DE VIDA, MOV SPEED, MOV COOLDOWN, SCORE BASE, IMAGEM, ESCALA, TIPO
 Virus_Model = [2, 2000, 15, 0.1, 30, normal_sprites, 2, None]
-Fast_Virus_Model = [1.5, 4500, 30, 0.05 , 80, fast_sprites, 0.40, None]
-Worms_Model = [8, 5000, 30, 0, 2000, worm_sprites, 0.9, 'Worm']
+Fast_Virus_Model = [1.5, 4500, 30, 0.05, 80, fast_sprites, 0.40, None]
+Worms_Model = [8, 5000, 30, 0, 1500, worm_sprites, 0.9, 'Worm']
 Worms_Child_Model = [1.5, 1000000, 15, 0.2, 10, child_sprites, 0.30, None]
 
 
@@ -1512,8 +1545,10 @@ while isRunning:
                     Game_state.game_state == 'main game' or Game_state.game_state == 'pause'):
                 if Game_state.game_state == 'pause' and cpu.HP > 0:
                     Game_state.game_state = 'main game'
+                    pygame.mixer.music.unpause()
                 else:
                     Game_state.game_state = 'pause'
+                    pygame.mixer.music.pause()
             if event.key == pygame.K_LEFT and Game_state.game_state == 'main game':
                 # Item_Group.add(Item(True))
                 cpu.HP += 1
