@@ -229,8 +229,6 @@ htplay5 = pygame.transform.scale(load('Images/htplay5.png').convert(), (DISPLAY_
 htplay6 = pygame.transform.scale(load('Images/htplay6.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
 
-
-
 shop_bg = load('Images/shop_bg.png').convert()
 shop_bg = pygame.transform.scale(shop_bg, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
@@ -525,6 +523,7 @@ class Item(Sprite):
         elif self.type == 'Luck':
             luck_stacks += 1
 
+
 class Button(Sprite):
     width = 0
     height = 0
@@ -561,6 +560,7 @@ class Button(Sprite):
                 Game_state.game_state = self.scene
                 if self.scene == 'resume':
                     pygame.mixer.music.unpause()
+
 
 class Game_State:
     i = 0
@@ -1061,13 +1061,12 @@ class Enemy(Sprite):
                     random = randint(0, len(Virus_Group) - 1)
 
                 if len(Virus_Group) >= random:
-                    Virus_Group.sprites()[random].life -= (
-                            click_damage / 2 + Virus_Group.sprites()[random].max_life * 0.10)
+                    Virus_Group.sprites()[random].life -= (click_damage / 4 + chain_stacks / 2 +  Virus_Group.sprites()[random].max_life * 0.10)
                     # print('Default damage: {}'.format(click_damage * ((chain_stacks / 2))))
                     # print('Targe Life: {}, Extra Damage: {}'.format(Virus_Group.sprites()[random].max_life, Virus_Group.sprites()[random].max_life / 4))
                     # print('Boosted damage: {}'.format((click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)))
                     thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
-                    Text_Group.add(Text('{:.1f}'.format(click_damage / 2 + Virus_Group.sprites()[random].max_life * 0.10),
+                    Text_Group.add(Text('{:.1f}'.format(click_damage / 4 + chain_stacks / 2 + Virus_Group.sprites()[random].max_life * 0.10),
                                         (255, 255, 0), 120, 0.8,
                                         [Virus_Group.sprites()[random].rect.centerx,
                                          Virus_Group.sprites()[random].rect.centery], 0))
@@ -1156,8 +1155,6 @@ class Enemy(Sprite):
                     self.image = self.sprites[2 + self.anim_num]
                 else:
                     self.image = pygame.transform.flip(self.sprites[2 + self.anim_num], True, False)
-
-
 
 
 class Scanner(Sprite):
@@ -1303,12 +1300,12 @@ class Status(Sprite):
     def update(self):
         display.blit(self.default_display, self.pos)
 
+
 class Shop_Button(Sprite):
     level = 0
     attribute = ''
     price = 0
     scale = 0
-    level = 0
     above_text = ''
     below_text = ''
     description_text = ''
@@ -1410,8 +1407,6 @@ class Shop_Button(Sprite):
             self.image = btn_maximized
 
 
-
-
 # CRIAÇÃO DE GRUPOS
 # Os grupos possibilitam a agrupamento de vários sprites em um único local
 # facilitando no processo de desenhar os sprites e chamar o seu metodo update
@@ -1493,7 +1488,6 @@ def thunder(entity, target, color, size):
 
     pygame.draw.line(display, dark_color, entity, between_pos, size)
     pygame.draw.line(display, color, between_pos, target, int(size / 1.3))
-
 
 
 def music_manager():
