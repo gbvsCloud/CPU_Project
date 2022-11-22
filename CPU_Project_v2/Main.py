@@ -1061,12 +1061,12 @@ class Enemy(Sprite):
                     random = randint(0, len(Virus_Group) - 1)
 
                 if len(Virus_Group) >= random:
-                    Virus_Group.sprites()[random].life -= (click_damage / 4 + chain_stacks / 2 +  Virus_Group.sprites()[random].max_life * 0.10)
+                    Virus_Group.sprites()[random].life -= (click_damage / 3 + Virus_Group.sprites()[random].max_life * (0.07 + 0.01 * chain_stacks))
                     # print('Default damage: {}'.format(click_damage * ((chain_stacks / 2))))
                     # print('Targe Life: {}, Extra Damage: {}'.format(Virus_Group.sprites()[random].max_life, Virus_Group.sprites()[random].max_life / 4))
                     # print('Boosted damage: {}'.format((click_damage * (chain_stacks / 2) + Virus_Group.sprites()[random].max_life * 0.25)))
                     thunder(self.rect.center, Virus_Group.sprites()[random].rect.center, (255, 255, 0), 6)
-                    Text_Group.add(Text('{:.1f}'.format(click_damage / 4 + chain_stacks / 2 + Virus_Group.sprites()[random].max_life * 0.10),
+                    Text_Group.add(Text('{:.1f}'.format(click_damage / 3 + Virus_Group.sprites()[random].max_life * (0.07 + 0.01 * chain_stacks)),
                                         (255, 255, 0), 120, 0.8,
                                         [Virus_Group.sprites()[random].rect.centerx,
                                          Virus_Group.sprites()[random].rect.centery], 0))
@@ -1521,9 +1521,8 @@ while isRunning:
         if event.type == pygame.MOUSEBUTTONDOWN:
             click_sound.play()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE and (
-                    Game_state.game_state == 'main game' or Game_state.game_state == 'pause'):
-                if Game_state.game_state == 'pause' and cpu.HP > 0:
+            if event.key == pygame.K_ESCAPE and (Game_state.game_state == 'main game' or Game_state.game_state == 'pause'):
+                if Game_state.game_state == 'pause' and cpu.HP > 0 and percentage < 100:
                     Game_state.game_state = 'main game'
                     pygame.mixer.music.unpause()
                 else:
