@@ -212,23 +212,29 @@ btn_upgrade = load('Images/btn_upgrade.png').convert_alpha()
 btn_maximized = load('Images/btn_maximized.png').convert_alpha()
 
 # BACKGROUND
-background = load('Images/windowserror.png').convert()
-background = pygame.transform.scale(background, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+bg_jogo1 = load('Images/bg_jogo1.png').convert()
+bg_jogo1 = pygame.transform.scale(bg_jogo1, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+bg_jogo2 = load('Images/bg_jogo2.png').convert()
+bg_jogo2 = pygame.transform.scale(bg_jogo2, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+
 
 pause_bg = load('Images/pause_bg.png').convert_alpha()
 pause = pygame.transform.scale(pause_bg, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
-htplay = load('Images/htplay.png').convert()
-htplay = pygame.transform.scale(htplay, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+htplay = pygame.transform.scale(load('Images/htplay.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+htplay2 = pygame.transform.scale(load('Images/htplay2.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+htplay3 = pygame.transform.scale(load('Images/htplay3.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+htplay4 = pygame.transform.scale(load('Images/htplay4.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+htplay5 = pygame.transform.scale(load('Images/htplay5.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+htplay6 = pygame.transform.scale(load('Images/htplay6.png').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
-minecraft = pygame.transform.scale(load('Images/minecraft.jpg').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
-minecraft_legends = pygame.transform.scale(load('Images/minecraft_legends.jpg').convert(), (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+
 
 
 shop_bg = load('Images/shop_bg.png').convert()
 shop_bg = pygame.transform.scale(shop_bg, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
-mainmenu_background = load('Images/mainmenu_bg.png').convert()
+mainmenu_background = load('Images/Fundo.png')
 mainmenu_background = pygame.transform.scale(mainmenu_background, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
 
 
@@ -236,8 +242,7 @@ mainmenu_background = pygame.transform.scale(mainmenu_background, (DISPLAY_WIDTH
 # A CLASSE SPRITE JÁ VEM POR PADRÃO COM VARIÁVEIS E METODOS PRÓPRIOS QUE AJUDAM NA CRIAÇÃO
 # DE INIMIGOS, BOTÕES, PLAYER
 class CPU(Sprite):
-    HP = 3
-    MAX_HP = 3
+
     damage_invulnerability = 0
     hurt_image = 0
     timer = 0
@@ -248,6 +253,11 @@ class CPU(Sprite):
         self.image = cpu_good
         width = self.image.get_width()
         height = self.image.get_height()
+        self.MAX_HP = 3 + cpu_level
+        self.HP = self.MAX_HP
+        self.damage_invulnerability = 0
+        self.hurt_image = 0
+        self.timer = 0
         self.image = cpu_good
         self.rect = self.image.get_rect(center=(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2))
         self.last_life = self.MAX_HP
@@ -553,19 +563,17 @@ class Button(Sprite):
                     pygame.mixer.music.unpause()
 
 class Game_State:
-    reset = 0
-    highest_life_default = 0
-    highest_life_worm = 0
     i = 0
-
-    images_htplay = [htplay, minecraft, minecraft_legends]
+    images_htplay = [htplay, htplay2, htplay6, htplay3, htplay4, htplay5]
     index = 0
 
     def __init__(self):
         self.game_state = 'main menu'
+        self.reset = 0
         self.randPos = 0
         self.randX = 0
         self.randY = 0
+        self.image_change = True
 
     def main_game(self):
         global timer, score, money, enemies_killed, click_damage, chain_stacks, drain_stacks, execute_stacks, percentage, current_song
@@ -581,6 +589,16 @@ class Game_State:
 
 
         percentage = (score * 100) / 8000000
+
+        if timer % 30 == 0:
+            self.image_change = not self.image_change
+
+        if self.image_change:
+            display.blit(bg_jogo1, (0, 0))
+        else:
+            display.blit(bg_jogo2, (0, 0))
+
+
 
         if timer <= 9000:
             spawning_time = 15 + (50 - int(timer/1800) * 10)
@@ -602,7 +620,7 @@ class Game_State:
         if self.reset == 0:  # RESETAR PARTIDA E VARIAVEIS
             self.reset_game()
         timer += 1
-        display.blit(background, (0, 0))
+
         #print(spawning_time)
         if timer % 600 == 0:
             if self.randPos == 0:
@@ -718,7 +736,7 @@ class Game_State:
         global money, current_song
         # display.blit(mainmenu_background, (0, 0))
 
-        display.fill((255, 255, 255))
+        display.fill((255, 248, 220))
 
         title_display = TITLE_FONT.render(
             f'CPU - CENTRAL DE PANICO URGENTE',
@@ -726,6 +744,7 @@ class Game_State:
             (0, 0, 0)
         )
         display.blit(title_display, (DISPLAY_WIDTH / 2 - title_display.get_width() / 2, -10))
+        display.blit(mainmenu_background, (0, 0))
 
         if current_song != 'Sounds/Menu CPU - Final.mp3':
             current_song = 'Sounds/Menu CPU - Final.mp3'
@@ -756,9 +775,6 @@ class Game_State:
         Status_Group.add(Status(defense_item, defense_stacks, (255, 255, 255), 140, 0, True))
         Status_Group.add(Status(execute_item, execute_stacks, (255, 255, 255), 140, 75, False))
         Status_Group.add(Status(luck_item, luck_stacks, (255, 255, 255), 140, 150, False))
-
-
-        display.blit(background, (0, 0))
 
         display.blit(pygame.transform.scale2x(cpu.image), (-36, DISPLAY_HEIGHT - cpu.image.get_height() * 2 + 30))
 
@@ -819,7 +835,7 @@ class Game_State:
         display.blit(self.images_htplay[self.index], (0, 0))
 
         images_display = DEFAULT_FONT.render(
-            f'{self.index + 1}/{len(self.images_htplay)}',
+            f'{self.index + 1}/{len(self.images_htplay)} - USE AS SETAS DO TECLADO PARA MUDAR A IMAGEM',
             True,
             (255, 255, 255)
         )
@@ -886,31 +902,6 @@ class Game_State:
 
 
 class Enemy(Sprite):
-    movement_cooldown = 0
-    movement_speed = 0
-    movement_speed_save = movement_speed
-    speed_movement = 0
-    slow_speed = 0
-    base_score = 0
-    final_score = 0
-    time_alive = 0
-    max_life = 0
-    life = 0
-    last_hit = 0
-    name = ''
-    id = 0
-    direction = []
-    sprites = []
-
-    anim_timer = 0
-    anim_num = 0
-
-    # SPECIAL VIRUS
-    type = None
-    spawn_timer = 1.5
-
-
-    slow = 0
 
     def __init__(self, info, x, y, name):
         super().__init__()
@@ -920,6 +911,12 @@ class Enemy(Sprite):
         self.type = info[7]
         self.id = randint(0, 99999999)
         self.name = name
+
+        self.anim_timer = 0
+        self.anim_num = 0
+        self.time_alive = 0
+        self.slow = 0
+        self.spawn_timer = 0
 
         if self.type != 'Worm':
             if int(score / info[1]) <= 10000:
@@ -1040,10 +1037,10 @@ class Enemy(Sprite):
 
         if self.rect.collidepoint(pos) and mouse_click == False and pygame.mouse.get_pressed()[0]:
             mouse_click = True
-            self.life -= click_damage + (ssd_level * 0.035 * self.max_life)
+            self.life -= click_damage + (ssd_level * 0.05 * self.max_life)
             self.slow = hd_level * 0.20
             Text_Group.add(
-                Text('{:.2f}'.format(click_damage + (ssd_level * 0.025 * self.max_life)),
+                Text('{:.2f}'.format(click_damage + (ssd_level * 0.05 * self.max_life)),
                      (255, 255, 255), 65, 0.5,
                      [self.rect.centerx,
                       self.rect.centery], 0))
@@ -1199,12 +1196,12 @@ class Scanner(Sprite):
         for enemy in Virus_Group:
             if self.rect.colliderect(enemy.rect) and self.cooldown <= 0:
                 self.damage_effect(enemy)
-                enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS
-                enemy.slow = hd_level
+                enemy.life -= (click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.05 * ssd_level * enemy.max_life)) / FPS
+                enemy.slow = hd_level * 0.20
                 self.collision = 0.05
                 if timer % 5 == 0:
                     Text_Group.add(Text(
-                        '{:.2f}'.format((click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.01 * ssd_level * enemy.max_life)) / FPS),
+                        '{:.2f}'.format((click_damage * (2.5 + (anti_virus_level * 0.5)) + (0.05 * ssd_level * enemy.max_life)) / FPS),
                         (255, 0, 0), 30, 0.4,
                         [enemy.rect.centerx,
                          enemy.rect.centery], 0))
@@ -1522,17 +1519,6 @@ while isRunning:
     # Verifica a posição e o click do mouse
     pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
-
-    keys = pygame.key.get_pressed()
-
-    if keys[pygame.K_w]:
-        Item_Group.add(Item(False))
-
-    if keys[pygame.K_SPACE]:
-        if len(Virus_Group) > 0:
-            for enemy in Virus_Group:
-                thunder(pos, enemy.rect.center, (255, 255, 0), 6)
-                enemy.life -= 0.1
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
