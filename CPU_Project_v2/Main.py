@@ -598,12 +598,10 @@ class Game_State:
         else:
             display.blit(bg_jogo2, (0, 0))
 
-
-
-        if timer <= 9000:
-            spawning_time = 15 + (50 - int(timer/1800) * 10)
+        if (50 - int(timer/1800) * 10) > 0:
+            spawning_time = 25 + (50 - int(timer/1800) * 10)
         else:
-            spawning_time = 15
+            spawning_time = 25
 
         if cpu.HP <= 0 or percentage >= 100:
             Game_state.game_state = 'pause'
@@ -721,7 +719,7 @@ class Game_State:
 
         enemies_killed = 1
         click_damage = 1 + ram_level * 3.5
-        cpu.MAX_HP = 3 + cpu_level * 1
+        cpu.MAX_HP = 9999999 + cpu_level * 1
         cpu.HP = cpu.MAX_HP
 
         chain_stacks = 0
@@ -1456,10 +1454,10 @@ HTPlay_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
 # SHOP BUTTONS
 Shop_Group.add(Button(0, DISPLAY_HEIGHT - 130, btn_back, 0.8, 'main menu'))
 Shop_Group.add(Shop_Button(DISPLAY_WIDTH / 2 - 200, DISPLAY_HEIGHT / 2 - 50, 'antivirus', 450, 200))
-Shop_Group.add(Shop_Button(1100, DISPLAY_HEIGHT / 2 - 200, 'ram', 200, 150))
-Shop_Group.add(Shop_Button(1100, DISPLAY_HEIGHT / 2 + 100, 'ssd', 350, 250))
-Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 - 200, 'cpu', 300, 150))
-Shop_Group.add(Shop_Button(200, DISPLAY_HEIGHT / 2 + 100, 'hd', 250, 200))
+Shop_Group.add(Shop_Button(DISPLAY_WIDTH / 2 + DISPLAY_WIDTH / 4 - 200, DISPLAY_HEIGHT / 2 - 200, 'ram', 200, 150))
+Shop_Group.add(Shop_Button(DISPLAY_WIDTH / 2 + DISPLAY_WIDTH / 4 - 200, DISPLAY_HEIGHT / 2 + 100, 'ssd', 350, 250))
+Shop_Group.add(Shop_Button(DISPLAY_WIDTH / 2 - DISPLAY_WIDTH / 4 - 200, DISPLAY_HEIGHT / 2 - 200, 'cpu', 300, 150))
+Shop_Group.add(Shop_Button(DISPLAY_WIDTH / 2 - DISPLAY_WIDTH / 4 - 200, DISPLAY_HEIGHT / 2 + 100, 'hd', 250, 200))
 
 
 # Modelos de Inimigo
