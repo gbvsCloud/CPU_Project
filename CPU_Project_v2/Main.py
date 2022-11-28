@@ -719,7 +719,7 @@ class Game_State:
 
         enemies_killed = 1
         click_damage = 1 + ram_level * 3.5
-        cpu.MAX_HP = 9999999 + cpu_level * 1
+        cpu.MAX_HP = 3 + cpu_level * 1
         cpu.HP = cpu.MAX_HP
 
         chain_stacks = 0
