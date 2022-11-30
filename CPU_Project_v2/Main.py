@@ -1,6 +1,5 @@
 import pygame
 import sys
-import pyautogui
 import os.path
 
 from pygame.image import load
@@ -14,10 +13,10 @@ pygame.init()
 
 # SETUP SETTINGS
 FPS = 60
-MONITOR_WIDTH, MONITOR_HEIGHT = pyautogui.size()
 
-DISPLAY_WIDTH = MONITOR_WIDTH
-DISPLAY_HEIGHT = MONITOR_HEIGHT
+
+DISPLAY_WIDTH = 1920
+DISPLAY_HEIGHT = 1080
 
 percentage = 0
 
@@ -179,9 +178,6 @@ worm_virus = load('Images/virus_worm.png').convert_alpha()
 cpu_good = load('Images/CPU.png').convert_alpha()
 cpu_bad = load('Images/CPU 2.png').convert_alpha()
 cpu_hurt = load('Images/CPU 3.png').convert_alpha()
-
-mouse_image = load('Images/mouse_image.png').convert_alpha()
-mouse_image2 = load('Images/mouse_image2.png').convert_alpha()
 
 cpu_good = pygame.transform.scale(cpu_good, (96, 96))
 cpu_bad = pygame.transform.scale(cpu_bad, (96, 96))
