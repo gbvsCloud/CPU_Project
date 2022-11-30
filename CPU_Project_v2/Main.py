@@ -15,8 +15,8 @@ pygame.init()
 FPS = 60
 
 
-DISPLAY_WIDTH = 1920
-DISPLAY_HEIGHT = 1080
+DISPLAY_WIDTH = 1680
+DISPLAY_HEIGHT = 1050
 
 percentage = 0
 
@@ -582,7 +582,7 @@ class Game_State:
             pygame.mixer.music.load(current_song)
             pygame.mixer.music.stop()
             pygame.mixer.music.play(-1)
-
+        print(enemies_killed)
 
         percentage = (score * 100) / 8000000
 
@@ -602,14 +602,14 @@ class Game_State:
         if cpu.HP <= 0 or percentage >= 100:
             Game_state.game_state = 'pause'
 
-        if luck_stacks > 1 and cpu.HP >= cpu.MAX_HP:
-            if enemies_killed % 16 == 0:
+        if luck_stacks >= 1 and cpu.HP >= cpu.MAX_HP:
+            if enemies_killed >= 16:
                 Item_Group.add(Item(False))
                 enemies_killed -= 15
         else:
-            if enemies_killed % 21 == 0:
+            if enemies_killed >= 21:
                 Item_Group.add(Item(False))
-                enemies_killed -= 15
+                enemies_killed -= 20
 
         if self.reset == 0:  # RESETAR PARTIDA E VARIAVEIS
             self.reset_game()
@@ -737,8 +737,9 @@ class Game_State:
             True,
             (0, 0, 0)
         )
-        display.blit(title_display, (DISPLAY_WIDTH / 2 - title_display.get_width() / 2, -10))
+
         display.blit(mainmenu_background, (0, 0))
+        display.blit(title_display, (DISPLAY_WIDTH / 2 - title_display.get_width() / 2, -10))
 
         if current_song != 'Sounds/Menu CPU - Final.mp3':
             current_song = 'Sounds/Menu CPU - Final.mp3'
@@ -795,6 +796,15 @@ class Game_State:
         Text_Group.update()
 
         display.blit(pause_bg, (0, 0))
+
+        money_display = DEFAULT_FONT.render(
+            f'Dinheiro:{int(money)}',
+            True,
+            (255, 255, 255)
+        )
+        display.blit(money_display, (DISPLAY_WIDTH / 2 - money_display.get_width() / 2, 150))
+
+        display.blit(score_display, (DISPLAY_WIDTH / 2 - score_display.get_width() / 2, 95))
 
         Status_Group.draw(display)
         Status_Group.update()
@@ -1363,7 +1373,6 @@ class Shop_Button(Sprite):
                     ram_level += 1
                 elif self.attribute == 'cpu':
                     cpu_level += 1
-                    print(cpu_level)
                 elif self.attribute == 'antivirus':
                     anti_virus_level += 1
                 elif self.attribute == 'hd':
@@ -1431,10 +1440,10 @@ Game_state = Game_State()
 
 # MAIN MENU BUTTONS
 Button_Group = Group()
-Button_Group.add(Button(0, DISPLAY_HEIGHT - 480, btn_start, 1, 'main game'))
-Button_Group.add(Button(0, DISPLAY_HEIGHT - 360, btn_htplay, 1, 'how to play'))
-Button_Group.add(Button(0, DISPLAY_HEIGHT - 240, btn_shop, 1, 'shop'))
-Button_Group.add(Button(0, DISPLAY_HEIGHT - 120, btn_exit, 1, 'exit'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 580, btn_start, 1, 'main game'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 460, btn_htplay, 1, 'how to play'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 340, btn_shop, 1, 'shop'))
+Button_Group.add(Button(0, DISPLAY_HEIGHT - 220, btn_exit, 1, 'exit'))
 
 
 # PAUSE BUTTONS
